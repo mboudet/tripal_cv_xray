@@ -37,7 +37,6 @@ class ChadoEntityChildCvterm {
       //cast as int
 
       while ($position <= $total) {
-        $cvterm_tracker = [];
 
         //all subjects are related to some object
 
@@ -50,22 +49,10 @@ class ChadoEntityChildCvterm {
         ])->range($position, $n)
           ->execute()->fetchAll();
 
-        //do your thing
-        foreach ($entities as $entity) {
-          $types = NULL;
-          $eid = $entity->entity_id;
-          $rid = $entity->record_id;
-          //directly associated cvterms
-          $cvterms = $this->get_all_associated_cvterms($bundle->data_table, $rid);
-          if (!$cvterms) {
-            continue;
-          }
-          foreach ($cvterms as $cvterm => $relationship) {
-            $cvterm_tracker[$cvterm][$eid]["relationship"] = $relationship;
-            $cvterm_tracker[$cvterm][$eid]["path_length"] = 0;
-          }
-        }
+
         $position += $n;
+
+        $cvterm_tracker = $this->get_direct_cvterms($entities, $bundle->data_table);
 
 
         //Loop through the cvterms, retrieve all child terms defined in cvtermpath, and add them in copying the relationship type
@@ -159,7 +146,6 @@ class ChadoEntityChildCvterm {
     }
 
     $ancestors = [];
-
 
     $query = db_select("chado.cvtermpath", 't')
       ->fields('t', ['subject_id', 'pathdistance']);
@@ -320,6 +306,42 @@ class ChadoEntityChildCvterm {
   }
 
 
+  public function update_collection($collection_id) {
+
+    //load collection
+
+
+  }
+
+
+  /**
+   *
+   * @param $entities
+   * @param $bundle_data_table
+   *
+   * @return array
+   */
+  public function get_direct_cvterms($entities, $bundle_data_table) {
+    $cvterm_tracker = [];
+
+    foreach ($entities as $entity) {
+      $types = NULL;
+      $eid = $entity->entity_id;
+      $rid = $entity->record_id;
+      //directly associated cvterms
+      $cvterms = $this->get_all_associated_cvterms($bundle_data_table, $rid);
+      if (!$cvterms) {
+        continue;
+      }
+      foreach ($cvterms as $cvterm => $relationship) {
+        $cvterm_tracker[$cvterm][$eid]["relationship"] = $relationship;
+        $cvterm_tracker[$cvterm][$eid]["path_length"] = 0;
+      }
+    }
+
+    return $cvterm_tracker;
+  }
+
 //
 //  public function update_specific_entities($entities) {
 //
@@ -339,4 +361,104 @@ class ChadoEntityChildCvterm {
 //
 //    }
 //  }
+
+
+  public function update_all_entities_v2() {
+
+
+    //First, empty db
+    db_truncate("public.tripal_cvterm_entity_linker")->execute();
+
+    print("\nupdating all entity cvterm mappings.\n");
+    $o_array = [];
+
+    $bundles = $this->get_all_bundles();
+
+    foreach ($bundles as $bundle) {
+
+      //Right now we're only populating feature and biomaterial.
+      //TODO: write more bundle cases.
+      if ($bundle->data_table !== "feature" && $bundle->data_table !== "biomaterial") {
+        continue;
+      }
+      print ("indexing $bundle->label\n");
+
+      $n = 100; // Set appropriate chunk size for your dataset.
+      $position = 0;
+
+      $cbd_table = "public.chado_" . $bundle->name;
+
+      $total = db_select($cbd_table, 'cbd')->fields('cbd', [
+        NULL,
+      ])->countQuery()->execute()->fetchField();
+      //cast as int
+
+      while ($position <= $total) {
+
+        //all subjects are related to some object
+
+        $memory = memory_get_usage();
+        echo "\nMemory at position $position $memory bytes\r";
+
+        $entities = db_select($cbd_table, 'cbd')->fields('cbd', [
+          'entity_id',
+          'record_id',
+        ])->range($position, $n)
+          ->execute()->fetchAll();
+
+
+        $position += $n;
+
+        foreach ($entities as $entity) {
+          $direct_cvterms = $this->get_direct_cvterms([$entity], $bundle->data_table);
+
+          $direct_cvterms = array_keys($direct_cvterms);
+          foreach ($direct_cvterms as $cvterm) {
+            $cvterms = [];
+            $cvterms[] = $cvterm;
+            $children = $this->fetch_ancestors($cvterm);
+            //put cvterm and children in list
+            $cvterms = array_merge($cvterms, $children);
+
+            foreach ($cvterms as $term) {
+
+              //look up db and accession for cvterm
+
+              $query = db_select("chado.cvterm", "CVT");
+              $query->join("chado.dbxref", "DBX", "CVT.dbxref_id = DBX.dbxref_id");
+              $query->fields("DBX", ["accession"]);
+              $query->join("chado.db", "DB", "DBX.db_id = DB.db_id");
+              $query->fields("DB", ["name"]);
+              $query->condition("CVT.cvterm_id", $term);
+
+              $full_term = $query->execute()->fetchObject();
+
+
+              if ($full_term) {
+                $accession = $full_term->accession;
+                $database = $full_term->name;
+
+                if ($database == "null") {
+                  continue;
+                }
+                $entity_id = $entity->entity_id;
+
+
+                db_insert("public.tripal_cvterm_entity_linker")
+                  ->fields([
+                    "cvterm_id" => (int) $term,
+                    "database" => $database,
+                    "accession" => $accession,
+                    'entity_id' => (int) $entity_id,
+                  ])
+                  ->execute();
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+
 }

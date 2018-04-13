@@ -83,12 +83,13 @@ class entity_child_cvterm_test extends TripalTestCase {
 
     $obj = $this->obj;
     $obj->update_all_entities();
-
-    $result = db_select("public.tripal_cvterm_entity_index", 't')
-      ->fields('t')
-      ->execute();
-
-    $this->assertNotEquals($result->rowCount(), 0);
+    $obj->update_all_entities_v2();
+//
+//    $result = db_select("public.tripal_cvterm_entity_index", 't')
+//      ->fields('t')
+//      ->execute();
+//
+//    $this->assertNotEquals($result->rowCount(), 0);
   }
 
 }
