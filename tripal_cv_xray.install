@@ -149,3 +149,11 @@ function tripal_cv_xray_uninstall() {
     db_drop_table('tripal_cvterm_entity_linker');
   }
 }
+
+function tripal_cv_xray_update_7100() {
+  if(!db_table_exists('tripal_cvterm_entity_linker')) {
+    $schema = tripal_cvterm_entity_linker();
+
+    db_create_table('tripal_cvterm_entity_linker', $schema);
+  }
+}
