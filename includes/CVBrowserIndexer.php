@@ -14,7 +14,7 @@ class CVBrowserIndexer {
    *
    * @var array
    */
-  protected $supportedTables = ['organism', 'feature'];
+  protected $supportedTables = ['feature'];
 
   /**
    * Primary keys cache.
