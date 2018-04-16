@@ -80,6 +80,7 @@ class CVBrowserIndexer {
       $data = $this->loadData($entities, $bundle);
       $this->insertData($data);
       unset($data);
+      unset($entities);
       ob_flush();
     }
   }
