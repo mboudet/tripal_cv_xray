@@ -159,8 +159,8 @@ class CVBrowserIndexer {
     }, $entities);
 
     // Get data
-    $cvterms = &$this->loadCVTerms($bundle->data_table, $record_ids);
-    $properties = &$this->loadProperties($bundle->data_table, $record_ids);
+    $cvterms = $this->loadCVTerms($bundle->data_table, $record_ids);
+    $properties = $this->loadProperties($bundle->data_table, $record_ids);
 
     // Index by record id
     foreach ($entities as $entity) {
@@ -283,6 +283,8 @@ class CVBrowserIndexer {
           'accession' => $property->accession,
         ]);
       }
+
+      unset($data[$record_id]);
     }
 
     return $query->execute();
