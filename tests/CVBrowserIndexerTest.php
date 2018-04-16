@@ -7,7 +7,7 @@ use StatonLab\TripalTestSuite\TripalTestCase;
 
 class CVBrowserIndexerTest extends TripalTestCase {
 
-  use DBTransaction;
+//  use DBTransaction;
 
 //  /** @test */
 //  public function testIndexerGetsBundles() {

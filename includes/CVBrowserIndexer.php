@@ -31,6 +31,13 @@ class CVBrowserIndexer {
   protected $verbose;
 
   /**
+   * Keep the tally.
+   *
+   * @var int
+   */
+  protected $tally = 0;
+
+  /**
    * Start the indexing job.
    *
    * @param bool $print_info whether to print memory and progress info.
@@ -44,6 +51,10 @@ class CVBrowserIndexer {
 
     foreach ($bundles as $bundle) {
       $this->indexBundle($bundle);
+
+      if ($this->verbose) {
+        print "Completed {$this->tally} entities\n";
+      }
     }
   }
 
@@ -56,6 +67,7 @@ class CVBrowserIndexer {
    */
   public function indexBundle($bundle) {
     $total = $this->bundleTotal($bundle);
+    $this->tally += $total;
     $position = 0;
 
     if ($this->verbose) {
@@ -67,6 +79,8 @@ class CVBrowserIndexer {
       $entities = $this->getEntitiesChunk($bundle, $position);
       $data = $this->loadData($entities, $bundle);
       $this->insertData($data);
+      unset($data);
+      ob_flush();
     }
   }
 
@@ -229,7 +243,6 @@ class CVBrowserIndexer {
    * @return \DatabaseStatementInterface|int
    */
   public function insertData(&$data) {
-    print "Inserting data " . count($data) . "\n";
     $query = db_insert('tripal_cvterm_entity_linker')->fields([
       'entity_id',
       'cvterm_id',
