@@ -81,6 +81,8 @@ class CVBrowserIndexer {
       $data = $this->loadData($entities, $bundle);
       $this->printMemoryUsage($position - $this->chunk);
       $this->insertData($data);
+      unset($data);
+      unset($entities);
       $this->printMemoryUsage($position - $this->chunk);
       ob_flush();
     }
@@ -169,6 +171,9 @@ class CVBrowserIndexer {
       ];
     }
 
+    unset($cvterms);
+    unset($properties);
+
     return $data;
   }
 
@@ -201,6 +206,8 @@ class CVBrowserIndexer {
       $data[$cvterm->record_id][] = $cvterm;
     }
 
+    unset($cvterms);
+
     return $data;
   }
 
@@ -231,6 +238,8 @@ class CVBrowserIndexer {
     foreach ($properties as $property) {
       $data[$property->record_id][] = $property;
     }
+
+    unset($properties);
 
     return $data;
   }
