@@ -246,7 +246,7 @@ class CVBrowserIndexer {
    * @throws \Exception
    * @return \DatabaseStatementInterface|int
    */
-  public function insertData(&$data) {
+  public function insertData($data) {
     $query = db_insert('tripal_cvterm_entity_linker')->fields([
       'entity_id',
       'cvterm_id',
