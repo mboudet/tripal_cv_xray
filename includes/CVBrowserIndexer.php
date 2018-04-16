@@ -77,10 +77,13 @@ class CVBrowserIndexer {
     while ($position <= $total) {
       $this->printMemoryUsage($position);
       $entities = $this->getEntitiesChunk($bundle, $position);
+      $this->printMemoryUsage($position);
       $data = $this->loadData($entities, $bundle);
+      $this->printMemoryUsage($position);
       $this->insertData($data);
       unset($data);
       unset($entities);
+      $this->printMemoryUsage($position);
       ob_flush();
     }
   }
