@@ -81,8 +81,6 @@ class CVBrowserIndexer {
       $data = $this->loadData($entities, $bundle);
       $this->printMemoryUsage($position - $this->chunk);
       $this->insertData($data);
-      unset($data);
-      unset($entities);
       $this->printMemoryUsage($position - $this->chunk);
       ob_flush();
     }
@@ -246,7 +244,7 @@ class CVBrowserIndexer {
    * @throws \Exception
    * @return \DatabaseStatementInterface|int
    */
-  public function insertData($data) {
+  public function insertData(&$data) {
     $query = db_insert('tripal_cvterm_entity_linker')->fields([
       'entity_id',
       'cvterm_id',
