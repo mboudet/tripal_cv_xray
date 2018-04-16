@@ -397,8 +397,8 @@ class ChadoEntityChildCvterm {
 
         //all subjects are related to some object
 
-        $memory = memory_get_usage();
-        echo "\nMemory at position $position $memory bytes\r";
+        $memory = number_format(memory_get_usage());
+        echo "\nMemory at position $position $memory bytes\n";
 
         $entities = db_select($cbd_table, 'cbd')->fields('cbd', [
           'entity_id',

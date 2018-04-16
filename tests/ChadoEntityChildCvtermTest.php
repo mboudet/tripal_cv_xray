@@ -7,7 +7,10 @@ class entity_child_cvterm_test extends TripalTestCase {
 
   use DBTransaction;
 
-  static $obj;
+  /**
+   * @var \ChadoEntityChildCvterm
+   */
+  protected $obj;
 
   protected function setUp() {
 
