@@ -251,20 +251,26 @@ class CVBrowserIndexer {
    *
    * @see \CVBrowserIndexer::loadData()
    * @throws \Exception
-   * @return \DatabaseStatementInterface|int
+   * @return void
    */
   public function insertData(&$data) {
-    $query = db_insert('tripal_cvterm_entity_linker')->fields([
-      'entity_id',
-      'cvterm_id',
-      'database',
-      'accession',
-    ]);
+
 
     foreach ($data as $record_id => $record) {
       $entity = $record['entity'];
       $cvterms = $record['cvterms'];
       $properties = $record['properties'];
+
+      if (empty($cvterms) && empty($properties)) {
+        continue;
+      }
+
+      $query = db_insert('tripal_cvterm_entity_linker')->fields([
+        'entity_id',
+        'cvterm_id',
+        'database',
+        'accession',
+      ]);
 
       foreach ($cvterms as $cvterm) {
         $query->values([
@@ -284,10 +290,11 @@ class CVBrowserIndexer {
         ]);
       }
 
+      $query->execute();
       unset($data[$record_id]);
     }
 
-    return $query->execute();
+    return;
   }
 
   /**
