@@ -297,7 +297,7 @@ class CVBrowserIndexer {
   public function bundles() {
     $query = db_select('chado_bundle', 'CB');
     $query->fields('CB', ['bundle_id', 'data_table']);
-    $query->fields('CT', ['label']);
+    $query->fields('TB', ['label']);
     $query->join('tripal_bundle', 'TB', 'TB.id = CB.bundle_id');
     $query->condition('data_table', $this->supportedTables, 'IN');
 
