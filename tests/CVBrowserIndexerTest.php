@@ -58,7 +58,7 @@ class CVBrowserIndexerTest extends TripalTestCase {
     global $user;
     tripal_add_job('Run CV Browser Indexer', 'tripal_cv_xray', 'CVBrowserIndexer::run', [], $user->uid);
 
-    $count = db_query('SELECT COUNT(*) FROM tripal_cvterm_entity_linker')->fetchField();
+    $count = (int) db_query('SELECT COUNT(*) FROM tripal_cvterm_entity_linker')->fetchField();
     $this->assertTrue($count > 0);
   }
 }
