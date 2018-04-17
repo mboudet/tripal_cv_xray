@@ -111,9 +111,7 @@ class CVBrowserIndexer {
    */
   public function bundleTotal($bundle) {
     $bundle_table = "chado_bio_data_{$bundle->bundle_id}";
-    return (int) db_select($bundle_table, 'BT')
-      ->countQuery()
-      ->execute()
+    return (int) db_query('SELECT COUNT(*) FROM ' . db_escape_table($bundle_table))
       ->fetchField();
   }
 
@@ -128,13 +126,19 @@ class CVBrowserIndexer {
    */
   public function getEntitiesChunk($bundle, &$position) {
     $bundle_table = "chado_bio_data_{$bundle->bundle_id}";
-    $query = db_select($bundle_table, 'CB');
-    $query->fields('CB', ['entity_id', 'record_id']);
-    $query->range($position, $this->chunk);
+
+    $query = db_query('SELECT CB.entity_id, CB.record_id 
+              FROM ' . db_escape_table($bundle_table) . ' CB
+              ORDER BY entity_id ASC
+              OFFSET :offset
+              LIMIT :limit', [
+      ':offset' => $position,
+      ':limit' => $this->chunk,
+    ]);
 
     $position += $this->chunk;
 
-    return $query->execute()->fetchAll();
+    return $query->fetchAll();
   }
 
   /**
@@ -187,19 +191,22 @@ class CVBrowserIndexer {
    * @return array Indexed by record id
    */
   public function loadCVTerms($table, $record_ids) {
-    $cvterm_table = "chado.{$table}_cvterm";
-    $primary_key = $this->primaryKey($table);
+    $cvterm_table = db_escape_table("chado.{$table}_cvterm");
+    $primary_key = db_escape_field($this->primaryKey($table));
 
-    $query = db_select($cvterm_table, 'CT');
-    $query->addField('CT', $primary_key, 'record_id');
-    $query->fields('CVT', ['cvterm_id']);
-    $query->fields('DB', ['name']);
-    $query->fields('DBX', ['accession']);
-    $query->join('chado.cvterm', 'CVT', 'CT.cvterm_id = CVT.cvterm_id');
-    $query->join("chado.dbxref", "DBX", "CVT.dbxref_id = DBX.dbxref_id");
-    $query->join("chado.db", "DB", "DBX.db_id = DB.db_id");
-    $query->condition($primary_key, $record_ids, 'IN');
-    $cvterms = $query->execute()->fetchAll();
+    $query = db_query('SELECT CT.' . $primary_key . ' as record_id,
+              CVT.cvterm_id,
+              DB.name,
+              DBX.accession
+              FROM ' . $cvterm_table . ' CT
+              INNER JOIN chado.cvterm CT ON CT.cvterm_id = CVT.cvterm_id
+              INNER JOIN chado.dbxref DBX ON CVT.dbxref_id = DBX.dbxref_id
+              INNER JOIN chado.db DB ON DBX.db_id = DB.db_id
+              WHERE ' . $primary_key . ' IN (:record_ids)', [
+      ':record_ids' => $record_ids,
+    ]);
+
+    $cvterms = $query->fetchAll();
 
     $data = [];
     foreach ($cvterms as $cvterm) {
@@ -220,19 +227,21 @@ class CVBrowserIndexer {
    * @return array
    */
   public function loadProperties($table, $record_ids) {
-    $props_table = "chado.{$table}prop";
-    $primary_key = $this->primaryKey($table);
+    $props_table = db_escape_table("chado.{$table}prop");
+    $primary_key = db_escape_field($this->primaryKey($table));
 
-    $query = db_select($props_table, 'CT');
-    $query->addField('CT', $primary_key, 'record_id');
-    $query->fields('CVT', ['cvterm_id']);
-    $query->fields('DB', ['name']);
-    $query->fields('DBX', ['accession']);
-    $query->join('chado.cvterm', 'CVT', 'CT.type_id = CVT.cvterm_id');
-    $query->join("chado.dbxref", "DBX", "CVT.dbxref_id = DBX.dbxref_id");
-    $query->join("chado.db", "DB", "DBX.db_id = DB.db_id");
-    $query->condition($primary_key, $record_ids, 'IN');
-    $properties = $query->execute()->fetchAll();
+    $query = db_query('SELECT CT.' . $primary_key . ' as record_id,
+              CVT.cvterm_id,
+              DB.name,
+              DBX.accession
+              FROM ' . $props_table . ' CT
+              INNER JOIN chado.cvterm CT ON CT.cvterm_id = CVT.cvterm_id
+              INNER JOIN chado.dbxref DBX ON CVT.dbxref_id = DBX.dbxref_id
+              INNER JOIN chado.db DB ON DBX.db_id = DB.db_id
+              WHERE ' . $primary_key . ' IN (:record_ids)', [
+      ':record_ids' => $record_ids,
+    ]);
+    $properties = $query->fetchAll();
 
     $data = [];
     foreach ($properties as $property) {
