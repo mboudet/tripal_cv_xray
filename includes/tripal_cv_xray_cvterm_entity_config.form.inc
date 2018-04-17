@@ -73,8 +73,8 @@ function tripal_cv_xray_cvterm_entity_form_submit($form, &$form_state) {
 
   $args = [];
   if ($form_state['values']['populate_type'] == "all") {
-//    tripal_add_job("populate_cvterm_entity_index", "tripal_cv_xray", "tripal_cv_xray_cvterm_entity_job", $args, $user->uid);
-    tripal_add_job("populate_cvterm_entity_index", "tripal_cv_xray", "CVBrowserIndexer::run", $args, $user->uid);
+    //    tripal_add_job("populate_cvterm_entity_index", "tripal_cv_xray", "tripal_cv_xray_cvterm_entity_job", $args, $user->uid);
+    tripal_add_job("populate_cvterm_entity_index", "tripal_cv_xray", "tripal_cv_xray_run_indexer", $args, $user->uid);
   }
 }
 
@@ -89,4 +89,3 @@ function tripal_cv_xray_cvterm_entity_form_submit($form, &$form_state) {
 function tripal_cv_xray_pop_callback($form, &$form_state) {
   return $form['div1_wrapper'];
 }
-

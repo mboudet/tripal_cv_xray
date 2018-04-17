@@ -8,6 +8,13 @@ function tripal_cv_xray_cvterm_entity_job() {
   $converter->update_all_entities();
 }
 
+/**
+ * Run the indexer.
+ */
+function tripal_cv_xray_run_indexer() {
+  CVBrowserIndexer::run();
+}
+
 
 ///**
 // * Updates provided entities with all CVs.
