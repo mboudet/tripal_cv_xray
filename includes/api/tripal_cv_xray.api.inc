@@ -44,25 +44,18 @@ function tripal_cv_xray_run_indexer() {
     $accession = $term["accession"];
     $short_name = $term["vocabulary"]["short_name"];
 
-    $query = db_select("public.tripal_cvterm_entity_index", "CEI");
-    $query->fields("CEI", [
-      "entities_array",
+    $query= db_select("public.tripal_cvterm_entity_linker", "CEL");
+    $query->fields("CEL", [
+      "entity_id",
     ])
-      ->condition("bundle_id", $target_bundle_id)
       ->condition("database", $short_name)
       ->condition("accession", $accession);
-
-    $ent_array = $query->execute()->fetchField();
+    $entities = $query->execute()->fetchAssoc();
     //Check if null here.
 
-    if (!$ent_array) {
-      continue;
-    }
-
-    $entities_with_term_info = unserialize($ent_array);
     //NEXT: filter the array to just entities mapped on this instance of the field
     $mapped_entities = $child_entities[$target_bundle_table];
-    $matched = array_intersect_key($entities_with_term_info, $mapped_entities);
+    $matched = array_intersect_key($entities, $mapped_entities);
 
     $key = $short_name . ":" . $accession;
     $child_entity_cvterms[$key] = $matched;
