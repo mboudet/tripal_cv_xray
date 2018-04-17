@@ -266,16 +266,16 @@ class CVBrowserIndexer {
     $data = [];
     foreach ($cvterms_by_object as $cvterm) {
       // avoid inserting duplicate cvterm ids
-      if (!isset($added[$cvterm->cvterm_id])) {
-        $added[$cvterm->cvterm_id] = TRUE;
+      if (!isset($added[$cvterm->object_id][$cvterm->cvterm_id])) {
+        $added[$cvterm->object_id][$cvterm->cvterm_id] = TRUE;
         $data[$cvterm->object_id][] = $cvterm;
       }
     }
 
     foreach ($cvterms_by_subject as $cvterm) {
       // avoid inserting duplicate cvterm ids
-      if (!isset($added[$cvterm->cvterm_id])) {
-        $added[$cvterm->cvterm_id] = TRUE;
+      if (!isset($added[$cvterm->subject_id][$cvterm->cvterm_id])) {
+        $added[$cvterm->subject_id][$cvterm->cvterm_id] = TRUE;
         $data[$cvterm->subject_id][] = $cvterm;
       }
     }
@@ -331,16 +331,16 @@ class CVBrowserIndexer {
     $data = [];
     foreach ($properties_by_object as $property) {
       // avoid inserting duplicate cvterm ids
-      if (!isset($added[$cvterm->cvterm_id])) {
-        $added[$property->cvterm_id] = TRUE;
+      if (!isset($added[$property->object_id][$property->cvterm_id])) {
+        $added[$property->object_id][$property->cvterm_id] = TRUE;
         $data[$property->object_id][] = $property;
       }
     }
 
     foreach ($properties_by_subject as $property) {
       // avoid inserting duplicate cvterm ids
-      if (!isset($added[$cvterm->cvterm_id])) {
-        $added[$property->cvterm_id] = TRUE;
+      if (!isset($added[$property->subject_id][$property->cvterm_id])) {
+        $added[$property->subject_id][$property->cvterm_id] = TRUE;
         $data[$property->subject_id][] = $property;
       }
     }
