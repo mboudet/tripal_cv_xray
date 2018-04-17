@@ -165,7 +165,7 @@ class CVBrowserIndexer {
     // Index by record id
     foreach ($entities as $entity) {
       $data[$entity->record_id] = [
-        'entity' => $entity,
+        'entity_id' => $entity->entity_id,
         'cvterms' => $cvterms[$entity->record_id] ?: [],
         'properties' => $properties[$entity->record_id] ?: [],
       ];
@@ -251,30 +251,24 @@ class CVBrowserIndexer {
    *
    * @see \CVBrowserIndexer::loadData()
    * @throws \Exception
-   * @return void
+   * @return \DatabaseStatementInterface|int
    */
   public function insertData(&$data) {
-
+    $query = db_insert('tripal_cvterm_entity_linker')->fields([
+      'entity_id',
+      'cvterm_id',
+      'database',
+      'accession',
+    ]);
 
     foreach ($data as $record_id => $record) {
-      $entity = $record['entity'];
+      $entity_id = $record['entity_id'];
       $cvterms = $record['cvterms'];
       $properties = $record['properties'];
 
-      if (empty($cvterms) && empty($properties)) {
-        continue;
-      }
-
-      $query = db_insert('tripal_cvterm_entity_linker')->fields([
-        'entity_id',
-        'cvterm_id',
-        'database',
-        'accession',
-      ]);
-
       foreach ($cvterms as $cvterm) {
         $query->values([
-          'entity_id' => $entity->entity_id,
+          'entity_id' => $entity_id,
           'cvterm_id' => $cvterm->cvterm_id,
           'database' => $cvterm->name,
           'accession' => $cvterm->accession,
@@ -283,18 +277,17 @@ class CVBrowserIndexer {
 
       foreach ($properties as $property) {
         $query->values([
-          'entity_id' => $entity->entity_id,
+          'entity_id' => $entity_id,
           'cvterm_id' => $property->cvterm_id,
           'database' => $property->name,
           'accession' => $property->accession,
         ]);
       }
 
-      $query->execute();
       unset($data[$record_id]);
     }
 
-    return;
+    return $query->execute();
   }
 
   /**
