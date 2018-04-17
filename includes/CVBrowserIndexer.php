@@ -199,7 +199,7 @@ class CVBrowserIndexer {
               DB.name,
               DBX.accession
               FROM ' . $cvterm_table . ' CT
-              INNER JOIN chado.cvterm CT ON CT.cvterm_id = CVT.cvterm_id
+              INNER JOIN chado.cvterm CVT ON CT.cvterm_id = CVT.cvterm_id
               INNER JOIN chado.dbxref DBX ON CVT.dbxref_id = DBX.dbxref_id
               INNER JOIN chado.db DB ON DBX.db_id = DB.db_id
               WHERE ' . $primary_key . ' IN (:record_ids)', [
@@ -235,7 +235,7 @@ class CVBrowserIndexer {
               DB.name,
               DBX.accession
               FROM ' . $props_table . ' CT
-              INNER JOIN chado.cvterm CT ON CT.cvterm_id = CVT.cvterm_id
+              INNER JOIN chado.cvterm CVT ON CT.cvterm_id = CVT.cvterm_id
               INNER JOIN chado.dbxref DBX ON CVT.dbxref_id = DBX.dbxref_id
               INNER JOIN chado.db DB ON DBX.db_id = DB.db_id
               WHERE ' . $primary_key . ' IN (:record_ids)', [
