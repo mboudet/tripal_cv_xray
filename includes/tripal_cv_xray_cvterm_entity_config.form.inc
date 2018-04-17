@@ -68,7 +68,6 @@ function tripal_cv_xray_cvterm_entity_form($form, &$form_state) {
  * @param $form_state
  */
 function tripal_cv_xray_cvterm_entity_form_submit($form, &$form_state) {
-
   global $user;
 
   $args = [];

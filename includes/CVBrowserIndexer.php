@@ -56,6 +56,10 @@ class CVBrowserIndexer {
         print "Completed {$this->tally} entities\n";
       }
     }
+
+    if ($this->verbose) {
+      print "Done!\n";
+    }
   }
 
   /**
@@ -77,14 +81,14 @@ class CVBrowserIndexer {
     while ($position <= $total) {
       $this->printMemoryUsage($position);
       $entities = $this->getEntitiesChunk($bundle, $position);
-      $this->printMemoryUsage($position - $this->chunk);
       $data = $this->loadData($entities, $bundle);
-      $this->printMemoryUsage($position - $this->chunk);
       $this->insertData($data);
       unset($data);
       unset($entities);
-      $this->printMemoryUsage($position - $this->chunk);
-      ob_flush();
+    }
+
+    if ($this->verbose) {
+      print "\n";
     }
   }
 
@@ -99,7 +103,7 @@ class CVBrowserIndexer {
     }
 
     $memory = number_format(memory_get_usage() / 1024 / 1024);
-    print "Memory usage at position {$position} is {$memory}MB\n";
+    print "Memory usage at position {$position} is {$memory}MB\r";
   }
 
   /**
@@ -147,8 +151,6 @@ class CVBrowserIndexer {
    * @return array
    */
   public function loadData($entities, $bundle) {
-    $data = [];
-
     if (empty($entities)) {
       return [];
     }
@@ -161,18 +163,22 @@ class CVBrowserIndexer {
     // Get data
     $cvterms = $this->loadCVTerms($bundle->data_table, $record_ids);
     $properties = $this->loadProperties($bundle->data_table, $record_ids);
+    $relatedCvterms = $this->loadRelatedCVTerms($bundle->data_table, $record_ids);
+    $relatedProps = $this->loadRelatedProperties($bundle->data_table, $record_ids);
 
     // Index by record id
+    $data = [];
     foreach ($entities as $entity) {
       $data[$entity->record_id] = [
         'entity_id' => $entity->entity_id,
         'cvterms' => $cvterms[$entity->record_id] ?: [],
         'properties' => $properties[$entity->record_id] ?: [],
+        'related_cvterms' => $relatedCvterms[$entity->record_id] ?: [],
+        'related_props' => $relatedProps[$entity->record_id] ?: [],
       ];
     }
 
-    unset($cvterms);
-    unset($properties);
+    unset($cvterms, $properties);
 
     return $data;
   }
@@ -184,7 +190,7 @@ class CVBrowserIndexer {
    * @param array $record_ids Array of integers referring to
    *                            record_id in chado_bio_data_N
    *
-   * @return array Indexed by record id
+   * @return array cvterm object indexed by record id
    */
   public function loadCVTerms($table, $record_ids) {
     $cvterm_table = "chado.{$table}_cvterm";
@@ -245,6 +251,136 @@ class CVBrowserIndexer {
   }
 
   /**
+   * Loads all related cvterms from _relationship table.
+   *
+   * @param $table
+   * @param $record_ids
+   *
+   * @return array
+   */
+  public function loadRelatedCVTerms($table, $record_ids) {
+    $cvterms_by_subject = $this->loadRelatedCvtermsBy('subject_id', $table, $record_ids);
+    $cvterms_by_object = $this->loadRelatedCvtermsBy('object_id', $table, $record_ids);
+
+    $added = [];
+    $data = [];
+    foreach ($cvterms_by_object as $cvterm) {
+      // avoid inserting duplicate cvterm ids
+      if (!isset($added[$cvterm->cvterm_id])) {
+        $added[$cvterm->cvterm_id] = TRUE;
+        $data[$cvterm->object_id][] = $cvterm;
+      }
+    }
+
+    foreach ($cvterms_by_subject as $cvterm) {
+      // avoid inserting duplicate cvterm ids
+      if (!isset($added[$cvterm->cvterm_id])) {
+        $added[$cvterm->cvterm_id] = TRUE;
+        $data[$cvterm->subject_id][] = $cvterm;
+      }
+    }
+
+    unset($cvterms_by_subject, $cvterms_by_object);
+
+    return $data;
+  }
+
+  /**
+   * Loads all related cvterms by subject or object.
+   *
+   * @param $column
+   * @param $table
+   * @param $record_ids
+   *
+   * @return mixed
+   */
+  public function loadRelatedCvtermsBy($column, $table, $record_ids) {
+    $cvterm_table = "chado.{$table}_cvterm";
+    $relationship_table = "chado.{$table}_relationship";
+    $primary_key = $this->primaryKey($table);
+
+    $opposite_column = $column === 'object_id' ? 'subject_id' : 'object_id';
+
+    $query = db_select($relationship_table, 'RT');
+    $query->addField('CT', $primary_key, 'record_id');
+    $query->fields('CVT', ['cvterm_id']);
+    $query->fields('DB', ['name']);
+    $query->fields('DBX', ['accession']);
+    $query->fields('RT', [$column]);
+    $query->join($cvterm_table, 'CT', 'RT.' . $opposite_column . ' = CT.' . $primary_key);
+    $query->join('chado.cvterm', 'CVT', 'CT.cvterm_id = CVT.cvterm_id');
+    $query->join("chado.dbxref", "DBX", "CVT.dbxref_id = DBX.dbxref_id");
+    $query->join("chado.db", "DB", "DBX.db_id = DB.db_id");
+    $query->condition('RT.' . $column, $record_ids, 'IN');
+    return $query->execute()->fetchAll();
+  }
+
+  /**
+   * Get all related properties from _relationship tables.
+   *
+   * @param $table
+   * @param $record_ids
+   *
+   * @return array
+   */
+  public function loadRelatedProperties($table, $record_ids) {
+    $properties_by_subject = $this->loadRelatedPropertiesBy('subject_id', $table, $record_ids);
+    $properties_by_object = $this->loadRelatedPropertiesBy('object_id', $table, $record_ids);
+
+    $added = [];
+    $data = [];
+    foreach ($properties_by_object as $property) {
+      // avoid inserting duplicate cvterm ids
+      if (!isset($added[$cvterm->cvterm_id])) {
+        $added[$property->cvterm_id] = TRUE;
+        $data[$property->object_id][] = $property;
+      }
+    }
+
+    foreach ($properties_by_subject as $property) {
+      // avoid inserting duplicate cvterm ids
+      if (!isset($added[$cvterm->cvterm_id])) {
+        $added[$property->cvterm_id] = TRUE;
+        $data[$property->subject_id][] = $property;
+      }
+    }
+
+    unset($properties_by_subject, $properties_by_object);
+
+    return $data;
+  }
+
+  /**
+   * Get related properties by specifying subject or object
+   *
+   * @param $column
+   * @param $table
+   * @param $record_ids
+   *
+   * @return mixed
+   */
+  public function loadRelatedPropertiesBy($column, $table, $record_ids) {
+    $prop_table = "chado.{$table}prop";
+    $relationship_table = "chado.{$table}_relationship";
+    $primary_key = $this->primaryKey($table);
+
+    $opposite_column = $column === 'object_id' ? 'subject_id' : 'object_id';
+
+    $query = db_select($relationship_table, 'RT');
+    $query->addField('PT', $primary_key, 'record_id');
+    $query->fields('CVT', ['cvterm_id']);
+    $query->fields('DB', ['name']);
+    $query->fields('DBX', ['accession']);
+    $query->fields('RT', [$column]);
+    $query->join($prop_table, 'PT', 'RT.' . $opposite_column . ' = PT.' . $primary_key);
+    $query->join('chado.cvterm', 'CVT', 'PT.type_id = CVT.cvterm_id');
+    $query->join("chado.dbxref", "DBX", "CVT.dbxref_id = DBX.dbxref_id");
+    $query->join("chado.db", "DB", "DBX.db_id = DB.db_id");
+    $query->condition('RT.' . $column, $record_ids, 'IN');
+    return $query->execute()->fetchAll();
+  }
+
+  /**
    * Insert data into the index table.
    *
    * @param array $data Array structured as returned in loadData
@@ -261,33 +397,50 @@ class CVBrowserIndexer {
       'accession',
     ]);
 
-    foreach ($data as $record_id => $record) {
-      $entity_id = $record['entity_id'];
-      $cvterms = $record['cvterms'];
-      $properties = $record['properties'];
+    foreach ($data as $record_id => &$record) {
+      $entity_id = &$record['entity_id'];
+      $cvterms = &$record['cvterms'];
+      $properties = &$record['properties'];
+      $related_props = &$record['related_props'];
+      $related_cvterms = &$record['related_cvterms'];
 
       foreach ($cvterms as $cvterm) {
-        $query->values([
-          'entity_id' => $entity_id,
-          'cvterm_id' => $cvterm->cvterm_id,
-          'database' => $cvterm->name,
-          'accession' => $cvterm->accession,
-        ]);
+        $query->values($this->extractCvtermForInsertion($cvterm, $entity_id));
+      }
+
+      foreach ($related_cvterms as $cvterm) {
+        $query->values($this->extractCvtermForInsertion($cvterm, $entity_id));
       }
 
       foreach ($properties as $property) {
-        $query->values([
-          'entity_id' => $entity_id,
-          'cvterm_id' => $property->cvterm_id,
-          'database' => $property->name,
-          'accession' => $property->accession,
-        ]);
+        $query->values($this->extractCvtermForInsertion($property, $entity_id));
+      }
+
+      foreach ($related_props as $property) {
+        $query->values($this->extractCvtermForInsertion($property, $entity_id));
       }
 
       unset($data[$record_id]);
     }
 
     return $query->execute();
+  }
+
+  /**
+   * Extracts the needed data for insertion into the linker table.
+   *
+   * @param $data
+   * @param $entity_id
+   *
+   * @return array
+   */
+  public function extractCvtermForInsertion($data, $entity_id) {
+    return [
+      'entity_id' => $entity_id,
+      'cvterm_id' => $data->cvterm_id,
+      'database' => $data->name,
+      'accession' => $data->accession,
+    ];
   }
 
   /**
@@ -355,6 +508,6 @@ class CVBrowserIndexer {
     $indexer = new static();
     $indexer->clearIndexTable();
     $indexer->setChunkSize(1000);
-    $indexer->index(true);
+    $indexer->index(TRUE);
   }
 }
