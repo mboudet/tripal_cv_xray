@@ -108,11 +108,6 @@ class CVBrowserIndexer {
     $this->recursiveUnset($entities);
   }
 
-  /**
-   * Recursively unset all data.
-   *
-   * @param $data
-   */
   public function recursiveUnset(&$data) {
     if(is_array($data)) {
       foreach ($data as &$value) {
@@ -237,7 +232,7 @@ class CVBrowserIndexer {
     $cvterms = $query->execute()->fetchAll();
 
     $data = [];
-    foreach ($cvterms as &$cvterm) {
+    foreach ($cvterms as $cvterm) {
       $data[$cvterm->record_id][] = $cvterm;
     }
 
@@ -269,7 +264,7 @@ class CVBrowserIndexer {
     $properties = $query->execute()->fetchAll();
 
     $data = [];
-    foreach ($properties as &$property) {
+    foreach ($properties as $property) {
       $data[$property->record_id][] = $property;
     }
 
@@ -290,23 +285,21 @@ class CVBrowserIndexer {
 
     $added = [];
     $data = [];
-    foreach ($cvterms_by_object as &$cvterm) {
+    foreach ($cvterms_by_object as $cvterm) {
       // avoid inserting duplicate cvterm ids
       if (!isset($added[$cvterm->object_id][$cvterm->cvterm_id])) {
         $added[$cvterm->object_id][$cvterm->cvterm_id] = TRUE;
         $data[$cvterm->object_id][] = $cvterm;
       }
     }
-    unset($cvterm);
 
-    foreach ($cvterms_by_subject as &$cvterm) {
+    foreach ($cvterms_by_subject as $cvterm) {
       // avoid inserting duplicate cvterm ids
       if (!isset($added[$cvterm->subject_id][$cvterm->cvterm_id])) {
         $added[$cvterm->subject_id][$cvterm->cvterm_id] = TRUE;
         $data[$cvterm->subject_id][] = $cvterm;
       }
     }
-    unset($cvterm);
 
     return $data;
   }
