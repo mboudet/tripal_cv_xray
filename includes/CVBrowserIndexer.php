@@ -51,7 +51,7 @@ class CVBrowserIndexer {
 
     foreach ($bundles as $bundle) {
       $this->indexBundle($bundle);
-
+      gc_collect_cycles();
       $this->write("Completed {$this->tally} entities");
 
     }
@@ -158,10 +158,10 @@ class CVBrowserIndexer {
     }, $entities);
 
     // Get data
-    $cvterms = &$this->loadCVTerms($bundle->data_table, $record_ids);
-    $properties = &$this->loadProperties($bundle->data_table, $record_ids);
-    $relatedCvterms = &$this->loadRelatedCVTerms($bundle->data_table, $record_ids);
-    $relatedProps = &$this->loadRelatedProperties($bundle->data_table, $record_ids);
+    $cvterms = $this->loadCVTerms($bundle->data_table, $record_ids);
+    $properties = $this->loadProperties($bundle->data_table, $record_ids);
+    $relatedCvterms = $this->loadRelatedCVTerms($bundle->data_table, $record_ids);
+    $relatedProps = $this->loadRelatedProperties($bundle->data_table, $record_ids);
 
     // Index by record id
     $data = [];
