@@ -51,7 +51,6 @@ class CVBrowserIndexer {
 
     foreach ($bundles as $bundle) {
       $this->indexBundle($bundle);
-      gc_collect_cycles();
       $this->write("Completed {$this->tally} entities");
 
     }
@@ -80,6 +79,7 @@ class CVBrowserIndexer {
       $this->insertData($data);
       unset($data);
       unset($entities);
+      gc_collect_cycles();
     }
 
     if ($this->verbose) {
