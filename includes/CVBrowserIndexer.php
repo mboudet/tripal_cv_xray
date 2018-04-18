@@ -52,9 +52,9 @@ class CVBrowserIndexer {
     foreach ($bundles as $key => $bundle) {
       $this->indexBundle($bundle);
       $this->write("Completed {$this->tally} entities");
-      unset($bundles[$key]);
+
     }
-    unset($bundle, $bundles);
+
 
     $this->write("Done!");
   }
@@ -78,8 +78,8 @@ class CVBrowserIndexer {
       $entities = $this->getEntitiesChunk($bundle, $position);
       $data = $this->loadData($entities, $bundle);
       $this->insertData($data);
-      unset($data);
-      unset($entities);
+
+
     }
 
     if ($this->verbose) {
@@ -173,12 +173,12 @@ class CVBrowserIndexer {
         'related_cvterms' => $relatedCvterms[$entity->record_id] ?: [],
         'related_props' => $relatedProps[$entity->record_id] ?: [],
       ];
-      unset($entities[$key], $cvterms[$entity->record_id]);
-      unset($properties[$entity->record_id], $relatedCvterms[$entity->record_id]);
-      unset($relatedProps[$entity->record_id]);
+
+
+
     }
 
-    unset($cvterms, $properties);
+
 
     return $data;
   }
@@ -213,7 +213,7 @@ class CVBrowserIndexer {
       $data[$cvterm->record_id][] = $cvterm;
     }
 
-    unset($cvterms);
+
 
     return $data;
   }
@@ -247,7 +247,7 @@ class CVBrowserIndexer {
       $data[$property->record_id][] = $property;
     }
 
-    unset($properties);
+
 
     return $data;
   }
@@ -282,7 +282,7 @@ class CVBrowserIndexer {
       }
     }
 
-    unset($cvterms_by_subject, $cvterms_by_object);
+    
 
     return $data;
   }
@@ -348,7 +348,7 @@ class CVBrowserIndexer {
       }
     }
 
-    unset($properties_by_subject, $properties_by_object);
+
 
     return $data;
   }
@@ -425,10 +425,10 @@ class CVBrowserIndexer {
         $query->values($this->extractCvtermForInsertion($property, $entity_id));
       }
 
-      unset($data[$record_id]);
+
     }
 
-    unset($data);
+
 
     return $query->execute();
   }
