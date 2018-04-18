@@ -52,14 +52,11 @@ class CVBrowserIndexer {
     foreach ($bundles as $bundle) {
       $this->indexBundle($bundle);
 
-      if ($this->verbose) {
-        print "Completed {$this->tally} entities\n";
-      }
+      $this->write("Completed {$this->tally} entities");
+
     }
 
-    if ($this->verbose) {
-      print "Done!\n";
-    }
+    $this->write("Done!");
   }
 
   /**
@@ -74,9 +71,7 @@ class CVBrowserIndexer {
     $this->tally += $total;
     $position = 0;
 
-    if ($this->verbose) {
-      print "Indexing {$bundle->label}. Total of {$total} records.\n";
-    }
+    $this->write("Indexing {$bundle->label}. Total of {$total} records.");
 
     while ($position <= $total) {
       $this->printMemoryUsage($position);
@@ -103,7 +98,10 @@ class CVBrowserIndexer {
     }
 
     $memory = number_format(memory_get_usage() / 1024 / 1024);
-    print "Memory usage at position {$position} is {$memory}MB\r";
+    print "Memory usage at position {$position} is {$memory}MB";
+    if ($position !== -1) {
+      print "\r";
+    }
   }
 
   /**
@@ -115,7 +113,9 @@ class CVBrowserIndexer {
    */
   public function bundleTotal($bundle) {
     $bundle_table = "chado_bio_data_{$bundle->bundle_id}";
-    return (int) db_query('SELECT COUNT(*) FROM ' . db_escape_table($bundle_table))
+    return (int) db_select($bundle_table)
+      ->countQuery()
+      ->execute()
       ->fetchField();
   }
 
@@ -160,11 +160,24 @@ class CVBrowserIndexer {
       return (int) $entity->record_id;
     }, $entities);
 
+    echo "memory before pulling any data:\n";
+    $this->printMemoryUsage(-1);
+    print "\n";
+
     // Get data
     $cvterms = $this->loadCVTerms($bundle->data_table, $record_ids);
+    $this->printMemoryUsage(-1);
+    print "\n";
     $properties = $this->loadProperties($bundle->data_table, $record_ids);
+    $this->printMemoryUsage(-1);
+    print "\n";
     $relatedCvterms = $this->loadRelatedCVTerms($bundle->data_table, $record_ids);
+    $this->printMemoryUsage(-1);
+    print "\n";
     $relatedProps = $this->loadRelatedProperties($bundle->data_table, $record_ids);
+    $this->printMemoryUsage(-1);
+    print "\n";
+    print"End loading data\n";
 
     // Index by record id
     $data = [];
@@ -205,6 +218,7 @@ class CVBrowserIndexer {
     $query->join("chado.dbxref", "DBX", "CVT.dbxref_id = DBX.dbxref_id");
     $query->join("chado.db", "DB", "DBX.db_id = DB.db_id");
     $query->condition($primary_key, $record_ids, 'IN');
+    $query->isNotNull('DB.name');
     $cvterms = $query->execute()->fetchAll();
 
     $data = [];
@@ -238,6 +252,7 @@ class CVBrowserIndexer {
     $query->join("chado.dbxref", "DBX", "CVT.dbxref_id = DBX.dbxref_id");
     $query->join("chado.db", "DB", "DBX.db_id = DB.db_id");
     $query->condition($primary_key, $record_ids, 'IN');
+    $query->isNotNull('DB.name');
     $properties = $query->execute()->fetchAll();
 
     $data = [];
@@ -312,6 +327,7 @@ class CVBrowserIndexer {
     $query->join("chado.dbxref", "DBX", "CVT.dbxref_id = DBX.dbxref_id");
     $query->join("chado.db", "DB", "DBX.db_id = DB.db_id");
     $query->condition('RT.' . $column, $record_ids, 'IN');
+    $query->isNotNull('DB.name');
     return $query->execute()->fetchAll();
   }
 
@@ -377,6 +393,8 @@ class CVBrowserIndexer {
     $query->join("chado.dbxref", "DBX", "CVT.dbxref_id = DBX.dbxref_id");
     $query->join("chado.db", "DB", "DBX.db_id = DB.db_id");
     $query->condition('RT.' . $column, $record_ids, 'IN');
+    $query->isNotNull('DB.name');
+
     return $query->execute()->fetchAll();
   }
 
@@ -499,6 +517,17 @@ class CVBrowserIndexer {
    */
   public function clearIndexTable() {
     return db_truncate('tripal_cvterm_entity_linker')->execute();
+  }
+
+  /**
+   * Write a line to STDOUT if verbose mode is enabled.
+   *
+   * @param $line
+   */
+  public function write($line) {
+    if ($this->verbose) {
+      print "$line\n";
+    }
   }
 
   /**
