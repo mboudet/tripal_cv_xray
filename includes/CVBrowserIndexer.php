@@ -83,6 +83,7 @@ class CVBrowserIndexer {
       $entities = $this->getEntitiesChunk($bundle, $position);
       $this->loadData($entities, $bundle);
       $this->insertData();
+      $this->data = null;
     }
 
     if ($this->verbose) {
