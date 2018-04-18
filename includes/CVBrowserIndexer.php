@@ -113,8 +113,6 @@ class CVBrowserIndexer {
       foreach ($data as &$value) {
         $this->recursiveUnset($value);
       }
-
-      return;
     }
 
     $data = null;
@@ -533,5 +531,6 @@ class CVBrowserIndexer {
     $indexer->clearIndexTable();
     $indexer->setChunkSize(1000);
     $indexer->index(TRUE);
+    unset($indexer);
   }
 }

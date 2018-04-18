@@ -18,7 +18,7 @@ class UsersTableSeeder extends Seeder
      *
      * @var bool
      */
-    public $auto_run = true;
+    public $auto_run = false;
 
     /**
      * The users that got created.
