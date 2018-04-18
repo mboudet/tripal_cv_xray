@@ -45,6 +45,13 @@ class CVBrowserIndexer {
   protected $data = [];
 
   /**
+   * Keeps track of current entities chunk.
+   *
+   * @var array
+   */
+  protected $entities = [];
+
+  /**
    * Start the indexing job.
    *
    * @param bool $print_info whether to print memory and progress info.
@@ -82,12 +89,13 @@ class CVBrowserIndexer {
 
     while ($position <= $total) {
       $this->printMemoryUsage($position);
-      $entities = $this->getEntitiesChunk($bundle, $position);
-      $this->loadData($entities, $bundle);
+      $this->getEntitiesChunk($bundle, $position);
+      $this->loadData($bundle);
       $this->insertData();
       $position += $this->chunk;
 
       $this->data = null;
+      $this->entities = null;
     }
 
     if ($this->verbose) {
@@ -141,7 +149,7 @@ class CVBrowserIndexer {
     $query->orderBy('entity_id', 'asc');
     $query->range($position, $this->chunk);
 
-    return $query->execute()->fetchAll();
+    $this->entities = $query->execute()->fetchAll();
   }
 
   /**
@@ -151,15 +159,15 @@ class CVBrowserIndexer {
    *                        from chado_bundle_N tables
    * @param object $bundle The chado bundle record
    */
-  public function loadData($entities, $bundle) {
-    if (empty($entities)) {
+  public function loadData($bundle) {
+    if (empty($this->entities)) {
       return;
     }
 
     // Get the record ids as an array
     $record_ids = array_map(function ($entity) {
       return (int) $entity->record_id;
-    }, $entities);
+    }, $this->entities);
 
     // Get data
     $cvterms = $this->loadCVTerms($bundle->data_table, $record_ids);
@@ -169,7 +177,7 @@ class CVBrowserIndexer {
 
     // Index by record id
     $this->data = [];
-    foreach ($entities as $key => $entity) {
+    foreach ($this->entities as $key => $entity) {
       $this->data[$entity->record_id] = [
         'entity_id' => $entity->entity_id,
         'cvterms' => $cvterms[$entity->record_id] ?: [],
