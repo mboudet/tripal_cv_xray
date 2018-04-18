@@ -38,6 +38,13 @@ class CVBrowserIndexer {
   protected $tally = 0;
 
   /**
+   * Keeps track of current chunk data.
+   *
+   * @var array
+   */
+  protected $data = [];
+
+  /**
    * Start the indexing job.
    *
    * @param bool $print_info whether to print memory and progress info.
@@ -52,9 +59,7 @@ class CVBrowserIndexer {
     foreach ($bundles as $key => $bundle) {
       $this->indexBundle($bundle);
       $this->write("Completed {$this->tally} entities");
-
     }
-
 
     $this->write("Done!");
   }
@@ -76,10 +81,8 @@ class CVBrowserIndexer {
     while ($position <= $total) {
       $this->printMemoryUsage($position);
       $entities = $this->getEntitiesChunk($bundle, $position);
-      $data = $this->loadData($entities, $bundle);
-      $this->insertData($data);
-
-
+      $this->loadData($entities, $bundle);
+      $this->insertData();
     }
 
     if ($this->verbose) {
@@ -144,12 +147,10 @@ class CVBrowserIndexer {
    * @param array $entities Must contain entity_id and record_id
    *                        from chado_bundle_N tables
    * @param object $bundle The chado bundle record
-   *
-   * @return array
    */
   public function loadData($entities, $bundle) {
     if (empty($entities)) {
-      return [];
+      return;
     }
 
     // Get the record ids as an array
@@ -164,23 +165,16 @@ class CVBrowserIndexer {
     $relatedProps = $this->loadRelatedProperties($bundle->data_table, $record_ids);
 
     // Index by record id
-    $data = [];
+    $this->data = [];
     foreach ($entities as $key => $entity) {
-      $data[$entity->record_id] = [
+      $this->data[$entity->record_id] = [
         'entity_id' => $entity->entity_id,
         'cvterms' => $cvterms[$entity->record_id] ?: [],
         'properties' => $properties[$entity->record_id] ?: [],
         'related_cvterms' => $relatedCvterms[$entity->record_id] ?: [],
         'related_props' => $relatedProps[$entity->record_id] ?: [],
       ];
-
-
-
     }
-
-
-
-    return $data;
   }
 
   /**
@@ -212,8 +206,6 @@ class CVBrowserIndexer {
     foreach ($cvterms as $cvterm) {
       $data[$cvterm->record_id][] = $cvterm;
     }
-
-
 
     return $data;
   }
@@ -247,8 +239,6 @@ class CVBrowserIndexer {
       $data[$property->record_id][] = $property;
     }
 
-
-
     return $data;
   }
 
@@ -281,8 +271,6 @@ class CVBrowserIndexer {
         $data[$cvterm->subject_id][] = $cvterm;
       }
     }
-
-    
 
     return $data;
   }
@@ -348,8 +336,6 @@ class CVBrowserIndexer {
       }
     }
 
-
-
     return $data;
   }
 
@@ -388,13 +374,12 @@ class CVBrowserIndexer {
   /**
    * Insert data into the index table.
    *
-   * @param array $data Array structured as returned in loadData
    *
    * @see \CVBrowserIndexer::loadData()
    * @throws \Exception
    * @return \DatabaseStatementInterface|int
    */
-  public function insertData(&$data) {
+  public function insertData() {
     $query = db_insert('tripal_cvterm_entity_linker')->fields([
       'entity_id',
       'cvterm_id',
@@ -402,33 +387,25 @@ class CVBrowserIndexer {
       'accession',
     ]);
 
-    foreach ($data as $record_id => &$record) {
-      $entity_id = &$record['entity_id'];
-      $cvterms = &$record['cvterms'];
-      $properties = &$record['properties'];
-      $related_props = &$record['related_props'];
-      $related_cvterms = &$record['related_cvterms'];
+    foreach ($this->data as $record_id => $record) {
+      $entity_id = $record['entity_id'];
 
-      foreach ($cvterms as $cvterm) {
+      foreach ($record['cvterms'] as $cvterm) {
         $query->values($this->extractCvtermForInsertion($cvterm, $entity_id));
       }
 
-      foreach ($related_cvterms as $cvterm) {
+      foreach ($record['related_cvterms'] as $cvterm) {
         $query->values($this->extractCvtermForInsertion($cvterm, $entity_id));
       }
 
-      foreach ($properties as $property) {
+      foreach ($record['properties'] as $property) {
         $query->values($this->extractCvtermForInsertion($property, $entity_id));
       }
 
-      foreach ($related_props as $property) {
+      foreach ($record['related_props'] as $property) {
         $query->values($this->extractCvtermForInsertion($property, $entity_id));
       }
-
-
     }
-
-
 
     return $query->execute();
   }
