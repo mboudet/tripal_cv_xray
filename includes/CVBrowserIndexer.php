@@ -63,7 +63,7 @@ class CVBrowserIndexer {
 
     $bundles = $this->bundles();
 
-    foreach ($bundles as $key => $bundle) {
+    while($bundle = $bundles->fetchObject()) {
       $this->indexBundle($bundle);
       $this->write("Completed {$this->tally} entities");
     }
@@ -158,14 +158,17 @@ class CVBrowserIndexer {
    * @param object $bundle The chado bundle record
    */
   public function loadData($bundle) {
-    if (empty($this->entities)) {
-      return;
+    // Get the record ids as an array
+    $record_ids = [];
+    $entities = [];
+    while ($entity = $this->entities->fetchObject()) {
+      $record_ids[] = $entity->record_id;
+      $entities[] = $entity;
     }
 
-    // Get the record ids as an array
-    $record_ids = array_map(function ($entity) {
-      return (int) $entity->record_id;
-    }, $this->entities);
+    if(empty($record_ids)) {
+      return;
+    }
 
     // Get data
     $cvterms = $this->loadCVTerms($bundle->data_table, $record_ids);
@@ -175,7 +178,7 @@ class CVBrowserIndexer {
 
     // Index by record id
     $this->data = [];
-    foreach ($this->entities as $key => $entity) {
+    foreach ($entities as $key => $entity) {
       $this->data[$entity->record_id] = [
         'entity_id' => $entity->entity_id,
         'cvterms' => $cvterms[$entity->record_id] ?: [],
@@ -184,6 +187,10 @@ class CVBrowserIndexer {
         'related_props' => $relatedProps[$entity->record_id] ?: [],
       ];
     }
+  }
+
+  protected function error($line) {
+    print "\033[31m$line\033[0m\n";
   }
 
   /**
@@ -212,9 +219,10 @@ class CVBrowserIndexer {
     $cvterms = $query->execute();
 
     $data = [];
-    foreach ($cvterms as $cvterm) {
+    while ($cvterm = $cvterms->fetchObject()) {
       $data[$cvterm->record_id][] = $cvterm;
     }
+
 
     return $data;
   }
@@ -244,9 +252,10 @@ class CVBrowserIndexer {
     $properties = $query->execute();
 
     $data = [];
-    foreach ($properties as $property) {
+    while ($property = $properties->fetchObject()) {
       $data[$property->record_id][] = $property;
     }
+
 
     return $data;
   }
@@ -265,7 +274,7 @@ class CVBrowserIndexer {
 
     $added = [];
     $data = [];
-    foreach ($cvterms_by_object as $cvterm) {
+    while ($cvterm = $cvterms_by_object->fetchObject()) {
       // avoid inserting duplicate cvterm ids
       if (!isset($added[$cvterm->object_id][$cvterm->cvterm_id])) {
         $added[$cvterm->object_id][$cvterm->cvterm_id] = TRUE;
@@ -273,13 +282,16 @@ class CVBrowserIndexer {
       }
     }
 
-    foreach ($cvterms_by_subject as $cvterm) {
+
+    while ($cvterm = $cvterms_by_subject->fetchObject()) {
       // avoid inserting duplicate cvterm ids
       if (!isset($added[$cvterm->subject_id][$cvterm->cvterm_id])) {
         $added[$cvterm->subject_id][$cvterm->cvterm_id] = TRUE;
         $data[$cvterm->subject_id][] = $cvterm;
       }
     }
+
+
 
     return $data;
   }
@@ -329,7 +341,7 @@ class CVBrowserIndexer {
 
     $added = [];
     $data = [];
-    foreach ($properties_by_object as $property) {
+    while($property = $properties_by_object->fetchObject()) {
       // avoid inserting duplicate cvterm ids
       if (!isset($added[$property->object_id][$property->cvterm_id])) {
         $added[$property->object_id][$property->cvterm_id] = TRUE;
@@ -337,13 +349,15 @@ class CVBrowserIndexer {
       }
     }
 
-    foreach ($properties_by_subject as $property) {
+
+    while($property = $properties_by_subject->fetchObject()) {
       // avoid inserting duplicate cvterm ids
       if (!isset($added[$property->subject_id][$property->cvterm_id])) {
         $added[$property->subject_id][$property->cvterm_id] = TRUE;
         $data[$property->subject_id][] = $property;
       }
     }
+
 
     return $data;
   }

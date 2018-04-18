@@ -16,7 +16,7 @@ class CVBrowserIndexerTest extends TripalTestCase {
     $bundles = $indexer->bundles();
 
     $this->assertNotEmpty($bundles);
-    $bundle = current($bundles);
+    $bundle = $bundles->fetchObject();
     $this->assertObjectHasAttribute('bundle_id', $bundle);
     $this->assertObjectHasAttribute('data_table', $bundle);
   }
@@ -25,8 +25,8 @@ class CVBrowserIndexerTest extends TripalTestCase {
   public function testIndexerGetsTotalRecordInBundles() {
     $indexer = new \CVBrowserIndexer();
 
-    $bundle = current($indexer->bundles());
-    $total = $indexer->bundleTotal($bundle);
+    $bundle =$indexer->bundles();
+    $total = $indexer->bundleTotal($bundle->fetchObject());
 
     $this->assertTrue(is_int($total));
   }
@@ -35,14 +35,13 @@ class CVBrowserIndexerTest extends TripalTestCase {
   public function testChunkingHandlesPositionCorrectly() {
     $indexer = new \CVBrowserIndexer();
 
-    $bundle = current($indexer->bundles());
-    $total = $indexer->bundleTotal($bundle);
+    $bundle = $indexer->bundles()->fetchObject();
+    $indexer->bundleTotal($bundle);
     $chunk_size = 100;
     $indexer->setChunkSize($chunk_size);
     $position = 0;
-    $chunk = $indexer->getEntitiesChunk($bundle, $total, $position);
+    $indexer->getEntitiesChunk($bundle, $position);
     $this->assertEquals($position + $chunk_size, $chunk_size);
-    $this->assertTrue(count($chunk) <= $chunk_size);
   }
 
   /** @test */
@@ -58,7 +57,7 @@ class CVBrowserIndexerTest extends TripalTestCase {
     $indexer = new \CVBrowserIndexer();
     $indexer->clearIndexTable();
     $indexer->setChunkSize(1000);
-    $indexer->index(TRUE);
+    $indexer->index(true);
 
     $count = (int) db_query('SELECT COUNT(*) FROM tripal_cvterm_entity_linker')->fetchField();
     $this->assertTrue($count > 0);
