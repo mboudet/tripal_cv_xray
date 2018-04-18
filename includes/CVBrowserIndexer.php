@@ -138,8 +138,6 @@ class CVBrowserIndexer {
    * @param object $bundle The bundle record.
    * @param int $position The starting position (this gets auto incremented to
    *                        the next position)
-   *
-   * @return array Chunk of entities. Returns empty array
    */
   public function getEntitiesChunk($bundle, $position) {
     $bundle_table = "chado_bio_data_{$bundle->bundle_id}";
@@ -149,7 +147,7 @@ class CVBrowserIndexer {
     $query->orderBy('entity_id', 'asc');
     $query->range($position, $this->chunk);
 
-    $this->entities = $query->execute()->fetchAll();
+    $this->entities = $query->execute();
   }
 
   /**
@@ -211,7 +209,7 @@ class CVBrowserIndexer {
     $query->join("chado.db", "DB", "DBX.db_id = DB.db_id");
     $query->condition($primary_key, $record_ids, 'IN');
     $query->isNotNull('DB.name');
-    $cvterms = $query->execute()->fetchAll();
+    $cvterms = $query->execute();
 
     $data = [];
     foreach ($cvterms as $cvterm) {
@@ -243,7 +241,7 @@ class CVBrowserIndexer {
     $query->join("chado.db", "DB", "DBX.db_id = DB.db_id");
     $query->condition($primary_key, $record_ids, 'IN');
     $query->isNotNull('DB.name');
-    $properties = $query->execute()->fetchAll();
+    $properties = $query->execute();
 
     $data = [];
     foreach ($properties as $property) {
@@ -314,7 +312,7 @@ class CVBrowserIndexer {
     $query->join("chado.db", "DB", "DBX.db_id = DB.db_id");
     $query->condition('RT.' . $column, $record_ids, 'IN');
     $query->isNotNull('DB.name');
-    return $query->execute()->fetchAll();
+    return $query->execute();
   }
 
   /**
@@ -379,7 +377,7 @@ class CVBrowserIndexer {
     $query->condition('RT.' . $column, $record_ids, 'IN');
     $query->isNotNull('DB.name');
 
-    return $query->execute()->fetchAll();
+    return $query->execute();
   }
 
   /**
@@ -475,7 +473,7 @@ class CVBrowserIndexer {
     $query->join('tripal_bundle', 'TB', 'TB.id = CB.bundle_id');
     $query->condition('data_table', $this->supportedTables, 'IN');
 
-    return $query->execute()->fetchAll();
+    return $query->execute();
   }
 
   /**
