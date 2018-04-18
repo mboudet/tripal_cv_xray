@@ -81,42 +81,18 @@ class CVBrowserIndexer {
     $this->write("Indexing {$bundle->label}. Total of {$total} records.");
 
     while ($position <= $total) {
-      $this->indexChunk($bundle, $position);
+      $this->printMemoryUsage($position);
+      $entities = $this->getEntitiesChunk($bundle, $position);
+      $this->loadData($entities, $bundle);
+      $this->insertData();
       $position += $this->chunk;
+
+      $this->data = null;
     }
 
     if ($this->verbose) {
       print "\n";
     }
-  }
-
-  /**
-   * Index a specific chunk.
-   *
-   * @param $bundle
-   * @param $position
-   *
-   * @throws \Exception
-   */
-  public function indexChunk($bundle, $position) {
-    $this->recursiveUnset($this->data);
-
-    $this->printMemoryUsage($position);
-    $entities = $this->getEntitiesChunk($bundle, $position);
-    $this->loadData($entities, $bundle);
-    $this->insertData();
-    $this->recursiveUnset($entities);
-  }
-
-  public function recursiveUnset(&$data) {
-    if(is_array($data)) {
-      foreach ($data as &$value) {
-        $this->recursiveUnset($value);
-      }
-    }
-
-    $data = null;
-    unset($data);
   }
 
   /**
@@ -527,17 +503,9 @@ class CVBrowserIndexer {
    * Runs the indexer in verbose mode.
    */
   public static function run() {
-    $memory = number_format(memory_get_usage() / 1024 / 1024);
-    print "Memory usage at START is {$memory}MB\n";
-
     $indexer = new static();
     $indexer->clearIndexTable();
     $indexer->setChunkSize(1000);
     $indexer->index(TRUE);
-    $indexer = null;
-    unset($indexer);
-
-    $memory = number_format(memory_get_usage() / 1024 / 1024);
-    print "Memory usage at END is {$memory}MB\n";
   }
 }
