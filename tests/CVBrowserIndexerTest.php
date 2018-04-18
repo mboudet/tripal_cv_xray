@@ -17,8 +17,8 @@ class CVBrowserIndexerTest extends TripalTestCase {
 
     $this->assertNotEmpty($bundles);
     $bundle = current($bundles);
-    $this->assertObjectHasAttribute('bundle_id', $bundle);
-    $this->assertObjectHasAttribute('data_table', $bundle);
+    $this->assertArrayHasKey('bundle_id', $bundle);
+    $this->assertArrayHasKey('data_table', $bundle);
   }
 
   /** @test */

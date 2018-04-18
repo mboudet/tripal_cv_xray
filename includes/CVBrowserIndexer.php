@@ -52,9 +52,7 @@ class CVBrowserIndexer {
     foreach ($bundles as $key => $bundle) {
       $this->indexBundle($bundle);
       $this->write("Completed {$this->tally} entities");
-
     }
-
 
     $this->write("Done!");
   }
@@ -71,15 +69,13 @@ class CVBrowserIndexer {
     $this->tally += $total;
     $position = 0;
 
-    $this->write("Indexing {$bundle->label}. Total of {$total} records.");
+    $this->write("Indexing {$bundle['label']}. Total of {$total} records.");
 
     while ($position <= $total) {
       $this->printMemoryUsage($position);
       $entities = $this->getEntitiesChunk($bundle, $position);
       $data = $this->loadData($entities, $bundle);
       $this->insertData($data);
-
-
     }
 
     if ($this->verbose) {
@@ -109,7 +105,7 @@ class CVBrowserIndexer {
    * @return int
    */
   public function bundleTotal($bundle) {
-    $bundle_table = "chado_bio_data_{$bundle->bundle_id}";
+    $bundle_table = "chado_bio_data_{$bundle['bundle_id']}";
     return (int) db_select($bundle_table)
       ->countQuery()
       ->execute()
@@ -126,7 +122,7 @@ class CVBrowserIndexer {
    * @return array Chunk of entities. Returns empty array
    */
   public function getEntitiesChunk($bundle, &$position) {
-    $bundle_table = "chado_bio_data_{$bundle->bundle_id}";
+    $bundle_table = "chado_bio_data_{$bundle['bundle_id']}";
 
     $query = db_select($bundle_table, 'CB');
     $query->fields('CB', ['entity_id', 'record_id']);
@@ -135,7 +131,7 @@ class CVBrowserIndexer {
 
     $position += $this->chunk;
 
-    return $query->execute()->fetchAll();
+    return $query->execute()->fetchAllAssoc('entity_id', PDO::FETCH_ASSOC);
   }
 
   /**
@@ -154,31 +150,26 @@ class CVBrowserIndexer {
 
     // Get the record ids as an array
     $record_ids = array_map(function ($entity) {
-      return (int) $entity->record_id;
+      return (int) $entity['record_id'];
     }, $entities);
 
     // Get data
-    $cvterms = $this->loadCVTerms($bundle->data_table, $record_ids);
-    $properties = $this->loadProperties($bundle->data_table, $record_ids);
-    $relatedCvterms = $this->loadRelatedCVTerms($bundle->data_table, $record_ids);
-    $relatedProps = $this->loadRelatedProperties($bundle->data_table, $record_ids);
+    $cvterms = $this->loadCVTerms($bundle['data_table'], $record_ids);
+    $properties = $this->loadProperties($bundle['data_table'], $record_ids);
+    $relatedCvterms = $this->loadRelatedCVTerms($bundle['data_table'], $record_ids);
+    $relatedProps = $this->loadRelatedProperties($bundle['data_table'], $record_ids);
 
     // Index by record id
     $data = [];
     foreach ($entities as $key => $entity) {
-      $data[$entity->record_id] = [
-        'entity_id' => $entity->entity_id,
-        'cvterms' => $cvterms[$entity->record_id] ?: [],
-        'properties' => $properties[$entity->record_id] ?: [],
-        'related_cvterms' => $relatedCvterms[$entity->record_id] ?: [],
-        'related_props' => $relatedProps[$entity->record_id] ?: [],
+      $data[$entity['record_id']] = [
+        'entity_id' => $entity['entity_id'],
+        'cvterms' => $cvterms[$entity['record_id']] ?: [],
+        'properties' => $properties[$entity['record_id']] ?: [],
+        'related_cvterms' => $relatedCvterms[$entity['record_id']] ?: [],
+        'related_props' => $relatedProps[$entity['record_id']] ?: [],
       ];
-
-
-
     }
-
-
 
     return $data;
   }
@@ -206,14 +197,12 @@ class CVBrowserIndexer {
     $query->join("chado.db", "DB", "DBX.db_id = DB.db_id");
     $query->condition($primary_key, $record_ids, 'IN');
     $query->isNotNull('DB.name');
-    $cvterms = $query->execute()->fetchAll();
+    $cvterms = $query->execute()->fetchAllAssoc('record_id', PDO::FETCH_ASSOC);
 
     $data = [];
     foreach ($cvterms as $cvterm) {
-      $data[$cvterm->record_id][] = $cvterm;
+      $data[$cvterm['record_id']][] = $cvterm;
     }
-
-
 
     return $data;
   }
@@ -240,14 +229,12 @@ class CVBrowserIndexer {
     $query->join("chado.db", "DB", "DBX.db_id = DB.db_id");
     $query->condition($primary_key, $record_ids, 'IN');
     $query->isNotNull('DB.name');
-    $properties = $query->execute()->fetchAll();
+    $properties = $query->execute()->fetchAllAssoc('record_id', PDO::FETCH_ASSOC);
 
     $data = [];
     foreach ($properties as $property) {
-      $data[$property->record_id][] = $property;
+      $data[$property['record_id']][] = $property;
     }
-
-
 
     return $data;
   }
@@ -268,21 +255,19 @@ class CVBrowserIndexer {
     $data = [];
     foreach ($cvterms_by_object as $cvterm) {
       // avoid inserting duplicate cvterm ids
-      if (!isset($added[$cvterm->object_id][$cvterm->cvterm_id])) {
-        $added[$cvterm->object_id][$cvterm->cvterm_id] = TRUE;
-        $data[$cvterm->object_id][] = $cvterm;
+      if (!isset($added[$cvterm['object_id']][$cvterm['cvterm_id']])) {
+        $added[$cvterm['object_id']][$cvterm['cvterm_id']] = TRUE;
+        $data[$cvterm['object_id']][] = $cvterm;
       }
     }
 
     foreach ($cvterms_by_subject as $cvterm) {
       // avoid inserting duplicate cvterm ids
-      if (!isset($added[$cvterm->subject_id][$cvterm->cvterm_id])) {
-        $added[$cvterm->subject_id][$cvterm->cvterm_id] = TRUE;
-        $data[$cvterm->subject_id][] = $cvterm;
+      if (!isset($added[$cvterm['subject_id']][$cvterm['cvterm_id']])) {
+        $added[$cvterm['subject_id']][$cvterm['cvterm_id']] = TRUE;
+        $data[$cvterm['subject_id']][] = $cvterm;
       }
     }
-
-    
 
     return $data;
   }
@@ -315,7 +300,7 @@ class CVBrowserIndexer {
     $query->join("chado.db", "DB", "DBX.db_id = DB.db_id");
     $query->condition('RT.' . $column, $record_ids, 'IN');
     $query->isNotNull('DB.name');
-    return $query->execute()->fetchAll();
+    return $query->execute()->fetchAllAssoc('record_id', PDO::FETCH_ASSOC);
   }
 
   /**
@@ -334,21 +319,19 @@ class CVBrowserIndexer {
     $data = [];
     foreach ($properties_by_object as $property) {
       // avoid inserting duplicate cvterm ids
-      if (!isset($added[$property->object_id][$property->cvterm_id])) {
-        $added[$property->object_id][$property->cvterm_id] = TRUE;
-        $data[$property->object_id][] = $property;
+      if (!isset($added[$property['object_id']][$property['cvterm_id']])) {
+        $added[$property['object_id']][$property['cvterm_id']] = TRUE;
+        $data[$property['object_id']][] = $property;
       }
     }
 
     foreach ($properties_by_subject as $property) {
       // avoid inserting duplicate cvterm ids
-      if (!isset($added[$property->subject_id][$property->cvterm_id])) {
-        $added[$property->subject_id][$property->cvterm_id] = TRUE;
-        $data[$property->subject_id][] = $property;
+      if (!isset($added[$property['subject_id']][$property['cvterm_id']])) {
+        $added[$property['subject_id']][$property['cvterm_id']] = TRUE;
+        $data[$property['subject_id']][] = $property;
       }
     }
-
-
 
     return $data;
   }
@@ -382,7 +365,7 @@ class CVBrowserIndexer {
     $query->condition('RT.' . $column, $record_ids, 'IN');
     $query->isNotNull('DB.name');
 
-    return $query->execute()->fetchAll();
+    return $query->execute()->fetchAllAssoc('record_id', PDO::FETCH_ASSOC);
   }
 
   /**
@@ -424,11 +407,7 @@ class CVBrowserIndexer {
       foreach ($related_props as $property) {
         $query->values($this->extractCvtermForInsertion($property, $entity_id));
       }
-
-
     }
-
-
 
     return $query->execute();
   }
@@ -444,9 +423,9 @@ class CVBrowserIndexer {
   public function extractCvtermForInsertion($data, $entity_id) {
     return [
       'entity_id' => $entity_id,
-      'cvterm_id' => $data->cvterm_id,
-      'database' => $data->name,
-      'accession' => $data->accession,
+      'cvterm_id' => $data['cvterm_id'],
+      'database' => $data['name'],
+      'accession' => $data['accession'],
     ];
   }
 
@@ -487,7 +466,7 @@ class CVBrowserIndexer {
     $query->join('tripal_bundle', 'TB', 'TB.id = CB.bundle_id');
     $query->condition('data_table', $this->supportedTables, 'IN');
 
-    return $query->execute()->fetchAll();
+    return $query->execute()->fetchAllAssoc('bundle_id', PDO::FETCH_ASSOC);
   }
 
   /**
