@@ -98,10 +98,7 @@ class CVBrowserIndexer {
     }
 
     $memory = number_format(memory_get_usage() / 1024 / 1024);
-    print "Memory usage at position {$position} is {$memory}MB";
-    if ($position !== -1) {
-      print "\r";
-    }
+    print "Memory usage at position {$position} is {$memory}MB\r";
   }
 
   /**
@@ -113,10 +110,7 @@ class CVBrowserIndexer {
    */
   public function bundleTotal($bundle) {
     $bundle_table = "chado_bio_data_{$bundle->bundle_id}";
-    return (int) db_select($bundle_table)
-      ->countQuery()
-      ->execute()
-      ->fetchField();
+    return (int) db_select($bundle_table)->countQuery()->execute()->fetchField();
   }
 
   /**
@@ -160,24 +154,11 @@ class CVBrowserIndexer {
       return (int) $entity->record_id;
     }, $entities);
 
-    echo "memory before pulling any data:\n";
-    $this->printMemoryUsage(-1);
-    print "\n";
-
     // Get data
     $cvterms = $this->loadCVTerms($bundle->data_table, $record_ids);
-    $this->printMemoryUsage(-1);
-    print "\n";
     $properties = $this->loadProperties($bundle->data_table, $record_ids);
-    $this->printMemoryUsage(-1);
-    print "\n";
     $relatedCvterms = $this->loadRelatedCVTerms($bundle->data_table, $record_ids);
-    $this->printMemoryUsage(-1);
-    print "\n";
     $relatedProps = $this->loadRelatedProperties($bundle->data_table, $record_ids);
-    $this->printMemoryUsage(-1);
-    print "\n";
-    print"End loading data\n";
 
     // Index by record id
     $data = [];
