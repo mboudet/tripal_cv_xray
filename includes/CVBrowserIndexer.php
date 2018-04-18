@@ -105,6 +105,7 @@ class CVBrowserIndexer {
     $entities = $this->getEntitiesChunk($bundle, $position);
     $this->loadData($entities, $bundle);
     $this->insertData();
+    $this->recursiveUnset($entities);
   }
 
   public function recursiveUnset(&$data) {
@@ -116,6 +117,7 @@ class CVBrowserIndexer {
       return;
     }
 
+    $data = null;
     unset($data);
   }
 
