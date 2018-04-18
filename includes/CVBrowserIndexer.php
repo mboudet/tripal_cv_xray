@@ -61,6 +61,8 @@ class CVBrowserIndexer {
       $this->write("Completed {$this->tally} entities");
     }
 
+    $this->printMemoryUsage('DONE');
+
     $this->write("Done!");
   }
 
@@ -79,16 +81,42 @@ class CVBrowserIndexer {
     $this->write("Indexing {$bundle->label}. Total of {$total} records.");
 
     while ($position <= $total) {
-      $this->printMemoryUsage($position);
-      $entities = $this->getEntitiesChunk($bundle, $position);
-      $this->loadData($entities, $bundle);
-      $this->insertData();
-      $this->data = null;
+      $this->indexChunk($bundle, $position);
+      $position += $this->chunk;
     }
 
     if ($this->verbose) {
       print "\n";
     }
+  }
+
+  /**
+   * Index a specific chunk.
+   *
+   * @param $bundle
+   * @param $position
+   *
+   * @throws \Exception
+   */
+  public function indexChunk($bundle, $position) {
+    $this->recursiveUnset($this->data);
+
+    $this->printMemoryUsage($position);
+    $entities = $this->getEntitiesChunk($bundle, $position);
+    $this->loadData($entities, $bundle);
+    $this->insertData();
+  }
+
+  public function recursiveUnset(&$data) {
+    if(is_array($data)) {
+      foreach ($data as &$value) {
+        $this->recursiveUnset($value);
+      }
+
+      return;
+    }
+
+    unset($data);
   }
 
   /**
@@ -129,15 +157,13 @@ class CVBrowserIndexer {
    *
    * @return array Chunk of entities. Returns empty array
    */
-  public function getEntitiesChunk($bundle, &$position) {
+  public function getEntitiesChunk($bundle, $position) {
     $bundle_table = "chado_bio_data_{$bundle->bundle_id}";
 
     $query = db_select($bundle_table, 'CB');
     $query->fields('CB', ['entity_id', 'record_id']);
     $query->orderBy('entity_id', 'asc');
     $query->range($position, $this->chunk);
-
-    $position += $this->chunk;
 
     return $query->execute()->fetchAll();
   }
