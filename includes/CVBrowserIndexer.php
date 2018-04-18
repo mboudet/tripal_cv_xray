@@ -49,11 +49,12 @@ class CVBrowserIndexer {
 
     $bundles = $this->bundles();
 
-    foreach ($bundles as $bundle) {
+    foreach ($bundles as $key => $bundle) {
       $this->indexBundle($bundle);
       $this->write("Completed {$this->tally} entities");
-
+      unset($bundles[$key]);
     }
+    unset($bundle, $bundles);
 
     $this->write("Done!");
   }
@@ -79,7 +80,6 @@ class CVBrowserIndexer {
       $this->insertData($data);
       unset($data);
       unset($entities);
-      gc_collect_cycles();
     }
 
     if ($this->verbose) {
@@ -427,6 +427,8 @@ class CVBrowserIndexer {
 
       unset($data[$record_id]);
     }
+
+    unset($data);
 
     return $query->execute();
   }
