@@ -110,7 +110,10 @@ class CVBrowserIndexer {
    */
   public function bundleTotal($bundle) {
     $bundle_table = "chado_bio_data_{$bundle->bundle_id}";
-    return (int) db_select($bundle_table)->countQuery()->execute()->fetchField();
+    return (int) db_select($bundle_table)
+      ->countQuery()
+      ->execute()
+      ->fetchField();
   }
 
   /**
@@ -162,7 +165,7 @@ class CVBrowserIndexer {
 
     // Index by record id
     $data = [];
-    foreach ($entities as $entity) {
+    foreach ($entities as $key => $entity) {
       $data[$entity->record_id] = [
         'entity_id' => $entity->entity_id,
         'cvterms' => $cvterms[$entity->record_id] ?: [],
@@ -170,6 +173,9 @@ class CVBrowserIndexer {
         'related_cvterms' => $relatedCvterms[$entity->record_id] ?: [],
         'related_props' => $relatedProps[$entity->record_id] ?: [],
       ];
+      unset($entities[$key], $cvterms[$entity->record_id]);
+      unset($properties[$entity->record_id], $relatedCvterms[$entity->record_id]);
+      unset($relatedProps[$entity->record_id]);
     }
 
     unset($cvterms, $properties);
