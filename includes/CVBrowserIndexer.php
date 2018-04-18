@@ -527,10 +527,17 @@ class CVBrowserIndexer {
    * Runs the indexer in verbose mode.
    */
   public static function run() {
+    $memory = number_format(memory_get_usage() / 1024 / 1024);
+    print "Memory usage at START is {$memory}MB\n";
+
     $indexer = new static();
     $indexer->clearIndexTable();
     $indexer->setChunkSize(1000);
     $indexer->index(TRUE);
+    $indexer = null;
     unset($indexer);
+
+    $memory = number_format(memory_get_usage() / 1024 / 1024);
+    print "Memory usage at END is {$memory}MB\n";
   }
 }
