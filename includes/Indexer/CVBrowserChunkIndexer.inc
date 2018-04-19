@@ -32,6 +32,7 @@ class CVBrowserChunkIndexer {
   public function __construct(array $entities, $bundle) {
     $this->entities = $entities;
     $this->bundle = $bundle;
+    gc_enable();
   }
 
   /**
@@ -370,5 +371,7 @@ class CVBrowserChunkIndexer {
   public function __destruct() {
     $this->entities = NULL;
     $this->bundle = NULL;
+    gc_collect_cycles();
+    gc_disable();
   }
 }

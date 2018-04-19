@@ -33,7 +33,6 @@ function tripal_cv_xray_get_index_bundle($bundle) {
     $memory = number_format(memory_get_usage() / 1024 / 1024);
     print "Memory usage at position {$position} is {$memory}MB\r";
 
-
     $query = db_query("SELECT CB.entity_id, CB.record_id
                         FROM {{$bundle_table}} CB
                         ORDER BY entity_id ASC
