@@ -1,153 +1,49 @@
 <?php
 
-class CVBrowserIndexer {
+class CVBrowserChunkIndexer {
 
   /**
-   * Chunk size.
-   *
-   * @var int
-   */
-  protected $chunk = 100;
-
-  /**
-   * Supported chado tables.
+   * Entities chunk.
    *
    * @var array
    */
-  protected $supportedTables = ['feature'];
+  protected $entities;
 
   /**
-   * Primary keys cache.
+   * The bundle object.
+   *
+   * @var object
+   */
+  protected $bundle;
+
+  /**
+   * Holds a cache of primary keys.
    *
    * @var array
    */
   protected static $primaryKeys = [];
 
   /**
-   * Verbose output or silent.
+   * CVBrowserChunkIndexer constructor.
    *
-   * @var bool
+   * @param array $entities
+   * @param object $bundle
    */
-  protected $verbose;
-
-  /**
-   * Keep the tally.
-   *
-   * @var int
-   */
-  protected $tally = 0;
-
-  /**
-   * Keeps track of current chunk data.
-   *
-   * @var array
-   */
-  protected $data = [];
-
-  /**
-   * Keeps track of current entities chunk.
-   *
-   * @var array
-   */
-  protected $entities = [];
-
-  /**
-   * Start the indexing job.
-   *
-   * @param bool $print_info whether to print memory and progress info.
-   *
-   * @throws \Exception
-   */
-  public function index($print_info = FALSE) {
-    $this->verbose = $print_info;
-
-    $bundles = $this->bundles();
-
-    while($bundle = $bundles->fetchObject()) {
-      $this->indexBundle($bundle);
-      $this->write("Completed {$this->tally} entities");
-    }
-
-    $this->printMemoryUsage('DONE');
-
-    $this->write("Done!");
+  public function __construct(array $entities, $bundle) {
+    $this->entities = $entities;
+    $this->bundle = $bundle;
   }
 
   /**
-   * Chunks and indexes data of a specific bundle.
+   * Start indexing cvterms for the given chunk.
    *
-   * @param $bundle
+   * @param bool $verbose
    *
-   * @throws \Exception
+   * @throws Exception
    */
-  public function indexBundle($bundle) {
-    $total = $this->bundleTotal($bundle);
-    $this->tally += $total;
-    $position = 0;
-
-    $this->write("Indexing {$bundle->label}. Total of {$total} records.");
-
-    while ($position <= $total) {
-      $this->printMemoryUsage($position);
-      $this->getEntitiesChunk($bundle, $position);
-      $this->loadData($bundle);
-      $this->insertData();
-      $position += $this->chunk;
-
-      $this->data = null;
-      $this->entities = null;
-    }
-
-    if ($this->verbose) {
-      print "\n";
-    }
-  }
-
-  /**
-   * Print memory usage if verbose option is specified.
-   *
-   * @param int $position Position of chunk.
-   */
-  protected function printMemoryUsage($position) {
-    if (!$this->verbose) {
-      return;
-    }
-
-    $memory = number_format(memory_get_usage() / 1024 / 1024);
-    print "Memory usage at position {$position} is {$memory}MB\r";
-  }
-
-  /**
-   * Get the total number of entities in a bundle.
-   *
-   * @param $bundle
-   *
-   * @return int
-   */
-  public function bundleTotal($bundle) {
-    $bundle_table = "chado_bio_data_{$bundle->bundle_id}";
-    return (int) db_select($bundle_table)
-      ->countQuery()
-      ->execute()
-      ->fetchField();
-  }
-
-  /**
-   * Get a chunk of entities.
-   *
-   * @param object $bundle The bundle record.
-   * @param int $position The starting position (this gets auto incremented to
-   *                        the next position)
-   */
-  public function getEntitiesChunk($bundle, $position) {
-    $bundle_table = "chado_bio_data_{$bundle->bundle_id}";
-
-    $query = db_select($bundle_table, 'CB');
-    $query->fields('CB', ['entity_id', 'record_id']);
-    $query->orderBy('entity_id', 'asc');
-    $query->range($position, $this->chunk);
-
-    $this->entities = $query->execute();
+  public function index() {
+    $data = $this->loadData();
+    $this->insertData($data);
   }
 
   /**
@@ -155,31 +51,32 @@ class CVBrowserIndexer {
    *
    * @param array $entities Must contain entity_id and record_id
    *                        from chado_bundle_N tables
-   * @param object $bundle The chado bundle record
+   *
+   * @return array
    */
-  public function loadData($bundle) {
+  public function loadData() {
     // Get the record ids as an array
     $record_ids = [];
     $entities = [];
-    while ($entity = $this->entities->fetchObject()) {
+    foreach ($this->entities as $entity) {
       $record_ids[] = $entity->record_id;
       $entities[] = $entity;
     }
 
-    if(empty($record_ids)) {
-      return;
+    if (empty($record_ids)) {
+      return [];
     }
 
     // Get data
-    $cvterms = $this->loadCVTerms($bundle->data_table, $record_ids);
-    $properties = $this->loadProperties($bundle->data_table, $record_ids);
-    $relatedCvterms = $this->loadRelatedCVTerms($bundle->data_table, $record_ids);
-    $relatedProps = $this->loadRelatedProperties($bundle->data_table, $record_ids);
+    $cvterms = $this->loadCVTerms($this->bundle->data_table, $record_ids);
+    $properties = $this->loadProperties($this->bundle->data_table, $record_ids);
+    $relatedCvterms = $this->loadRelatedCVTerms($this->bundle->data_table, $record_ids);
+    $relatedProps = $this->loadRelatedProperties($this->bundle->data_table, $record_ids);
 
     // Index by record id
-    $this->data = [];
+    $data = [];
     foreach ($entities as $key => $entity) {
-      $this->data[$entity->record_id] = [
+      $data[$entity->record_id] = [
         'entity_id' => $entity->entity_id,
         'cvterms' => $cvterms[$entity->record_id] ?: [],
         'properties' => $properties[$entity->record_id] ?: [],
@@ -187,10 +84,8 @@ class CVBrowserIndexer {
         'related_props' => $relatedProps[$entity->record_id] ?: [],
       ];
     }
-  }
 
-  protected function error($line) {
-    print "\033[31m$line\033[0m\n";
+    return $data;
   }
 
   /**
@@ -222,7 +117,6 @@ class CVBrowserIndexer {
     while ($cvterm = $cvterms->fetchObject()) {
       $data[$cvterm->record_id][] = $cvterm;
     }
-
 
     return $data;
   }
@@ -256,7 +150,6 @@ class CVBrowserIndexer {
       $data[$property->record_id][] = $property;
     }
 
-
     return $data;
   }
 
@@ -274,7 +167,7 @@ class CVBrowserIndexer {
 
     $added = [];
     $data = [];
-    while ($cvterm = $cvterms_by_object->fetchObject()) {
+    foreach ($cvterms_by_object as $cvterm) {
       // avoid inserting duplicate cvterm ids
       if (!isset($added[$cvterm->object_id][$cvterm->cvterm_id])) {
         $added[$cvterm->object_id][$cvterm->cvterm_id] = TRUE;
@@ -283,14 +176,13 @@ class CVBrowserIndexer {
     }
 
 
-    while ($cvterm = $cvterms_by_subject->fetchObject()) {
+    foreach ($cvterms_by_subject as $cvterm) {
       // avoid inserting duplicate cvterm ids
       if (!isset($added[$cvterm->subject_id][$cvterm->cvterm_id])) {
         $added[$cvterm->subject_id][$cvterm->cvterm_id] = TRUE;
         $data[$cvterm->subject_id][] = $cvterm;
       }
     }
-
 
 
     return $data;
@@ -324,7 +216,7 @@ class CVBrowserIndexer {
     $query->join("chado.db", "DB", "DBX.db_id = DB.db_id");
     $query->condition('RT.' . $column, $record_ids, 'IN');
     $query->isNotNull('DB.name');
-    return $query->execute();
+    return $query->execute()->fetchAll();
   }
 
   /**
@@ -341,23 +233,21 @@ class CVBrowserIndexer {
 
     $added = [];
     $data = [];
-    while($property = $properties_by_object->fetchObject()) {
-      // avoid inserting duplicate cvterm ids
+    foreach ($properties_by_object as $property) {
+      // Avoid inserting duplicate cvterm ids
       if (!isset($added[$property->object_id][$property->cvterm_id])) {
         $added[$property->object_id][$property->cvterm_id] = TRUE;
         $data[$property->object_id][] = $property;
       }
     }
 
-
-    while($property = $properties_by_subject->fetchObject()) {
-      // avoid inserting duplicate cvterm ids
+    foreach ($properties_by_subject as $property) {
+      // Avoid inserting duplicate cvterm ids
       if (!isset($added[$property->subject_id][$property->cvterm_id])) {
         $added[$property->subject_id][$property->cvterm_id] = TRUE;
         $data[$property->subject_id][] = $property;
       }
     }
-
 
     return $data;
   }
@@ -391,7 +281,7 @@ class CVBrowserIndexer {
     $query->condition('RT.' . $column, $record_ids, 'IN');
     $query->isNotNull('DB.name');
 
-    return $query->execute();
+    return $query->execute()->fetchAll();
   }
 
   /**
@@ -400,9 +290,9 @@ class CVBrowserIndexer {
    *
    * @see \CVBrowserIndexer::loadData()
    * @throws \Exception
-   * @return \DatabaseStatementInterface|int
+   * @return void
    */
-  public function insertData() {
+  public function insertData(&$data) {
     $query = db_insert('tripal_cvterm_entity_linker')->fields([
       'entity_id',
       'cvterm_id',
@@ -410,7 +300,7 @@ class CVBrowserIndexer {
       'accession',
     ]);
 
-    foreach ($this->data as $record_id => $record) {
+    foreach ($data as $record_id => $record) {
       $entity_id = $record['entity_id'];
 
       foreach ($record['cvterms'] as $cvterm) {
@@ -430,7 +320,7 @@ class CVBrowserIndexer {
       }
     }
 
-    return $query->execute();
+    $query->execute();
   }
 
   /**
@@ -476,56 +366,10 @@ class CVBrowserIndexer {
   }
 
   /**
-   * Get the bundles we are interested in.
-   *
-   * @return mixed
+   * Clean up the object when done with it
    */
-  public function bundles() {
-    $query = db_select('chado_bundle', 'CB');
-    $query->fields('CB', ['bundle_id', 'data_table']);
-    $query->fields('TB', ['label']);
-    $query->join('tripal_bundle', 'TB', 'TB.id = CB.bundle_id');
-    $query->condition('data_table', $this->supportedTables, 'IN');
-
-    return $query->execute();
-  }
-
-  /**
-   * Set the chunk size.
-   *
-   * @param int $size Number of elements per chunk.
-   */
-  public function setChunkSize($size) {
-    $this->chunk = $size;
-  }
-
-  /**
-   * Truncate the tripal_cvterm_entity_linker table.
-   *
-   * @return \DatabaseStatementInterface
-   */
-  public function clearIndexTable() {
-    return db_truncate('tripal_cvterm_entity_linker')->execute();
-  }
-
-  /**
-   * Write a line to STDOUT if verbose mode is enabled.
-   *
-   * @param $line
-   */
-  public function write($line) {
-    if ($this->verbose) {
-      print "$line\n";
-    }
-  }
-
-  /**
-   * Runs the indexer in verbose mode.
-   */
-  public static function run() {
-    $indexer = new static();
-    $indexer->clearIndexTable();
-    $indexer->setChunkSize(1000);
-    $indexer->index(TRUE);
+  public function __destruct() {
+    $this->entities = NULL;
+    $this->bundle = NULL;
   }
 }

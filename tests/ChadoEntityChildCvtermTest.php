@@ -22,6 +22,9 @@ class entity_child_cvterm_test extends TripalTestCase {
   public function test_get_all_associated_cvterms() {
     $obj = $this->obj;
 
+    factory('chado.organism', 100);
+    factory('chado.feature', 100);
+
 //look up a random record ID with a prop
     $query = db_select("chado.feature", 'F')
       ->fields('F', ['feature_id']);
