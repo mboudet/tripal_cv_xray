@@ -4,8 +4,8 @@
 
 require_once "includes/ChadoEntityChildCvterm.inc";
 require_once "includes/api/tripal_cv_xray.api.inc";
-require_once "includes/indexer/CVBrowserIndexer.php";
-require_once "includes/indexer/CVBrowserChunkIndexer.php";
+require_once "includes/indexer/CVBrowserIndexer.inc";
+require_once "includes/indexer/CVBrowserChunkIndexer.inc";
 
 /**
  * implement hook menu
@@ -22,7 +22,6 @@ function tripal_cv_xray_menu() {
     'file' => 'includes/tripal_cv_xray_cvterm_entity_config.form.inc',
     'file_path' => drupal_get_path('module', 'tripal_cv_xray'),
   ];
-
 
   $items['cv_entities/%/%'] = [
     'type' => MENU_NORMAL_ITEM,
@@ -44,7 +43,6 @@ function tripal_cv_xray_menu() {
     'file path' => drupal_get_path('module', 'tripal_cv_xray'),
     'type' => MENU_CALLBACK,
   ];
-
 
   return $items;
 }

@@ -101,20 +101,20 @@ class CVBrowserChunkIndexer {
     $cvterm_table = "chado.{$table}_cvterm";
     $primary_key = $this->primaryKey($table);
 
-    $query = db_select($cvterm_table, 'CT');
-    $query->addField('CT', $primary_key, 'record_id');
-    $query->fields('CVT', ['cvterm_id']);
-    $query->fields('DB', ['name']);
-    $query->fields('DBX', ['accession']);
-    $query->join('chado.cvterm', 'CVT', 'CT.cvterm_id = CVT.cvterm_id');
-    $query->join("chado.dbxref", "DBX", "CVT.dbxref_id = DBX.dbxref_id");
-    $query->join("chado.db", "DB", "DBX.db_id = DB.db_id");
-    $query->condition($primary_key, $record_ids, 'IN');
-    $query->isNotNull('DB.name');
-    $cvterms = $query->execute();
+    $query = db_query("SELECT CT.{$primary_key} as record_id,
+                              CVT.cvterm_id,
+                              DB.name,
+                              DBX.accession
+                        FROM {$cvterm_table} CT
+                        INNER JOIN chado.cvterm CVT ON CT.cvterm_id = CVT.cvterm_id
+                        INNER JOIN chado.dbxref DBX ON CVT.dbxref_id = DBX.dbxref_id
+                        INNER JOIN chado.db DB ON DBX.db_id = DB.db_id
+                        WHERE {$primary_key} IN (:ids)
+                              AND DB.name IS NOT NULL", [':ids' => $record_ids]);
+    $cvterms = $query->fetchAll();
 
     $data = [];
-    while ($cvterm = $cvterms->fetchObject()) {
+    foreach ($cvterms as $cvterm) {
       $data[$cvterm->record_id][] = $cvterm;
     }
 
@@ -133,20 +133,20 @@ class CVBrowserChunkIndexer {
     $props_table = "chado.{$table}prop";
     $primary_key = $this->primaryKey($table);
 
-    $query = db_select($props_table, 'CT');
-    $query->addField('CT', $primary_key, 'record_id');
-    $query->fields('CVT', ['cvterm_id']);
-    $query->fields('DB', ['name']);
-    $query->fields('DBX', ['accession']);
-    $query->join('chado.cvterm', 'CVT', 'CT.type_id = CVT.cvterm_id');
-    $query->join("chado.dbxref", "DBX", "CVT.dbxref_id = DBX.dbxref_id");
-    $query->join("chado.db", "DB", "DBX.db_id = DB.db_id");
-    $query->condition($primary_key, $record_ids, 'IN');
-    $query->isNotNull('DB.name');
-    $properties = $query->execute();
+    $query = db_query("SELECT PT.{$primary_key} as record_id,
+                              CVT.cvterm_id,
+                              DB.name,
+                              DBX.accession
+                        FROM {$props_table} PT
+                        INNER JOIN chado.cvterm CVT ON PT.type_id = CVT.cvterm_id
+                        INNER JOIN chado.dbxref DBX ON CVT.dbxref_id = DBX.dbxref_id
+                        INNER JOIN chado.db DB ON DBX.db_id = DB.db_id
+                        WHERE {$primary_key} IN (:ids)
+                              AND DB.name IS NOT NULL", [':ids' => $record_ids]);
+    $properties = $query->fetchAll();
 
     $data = [];
-    while ($property = $properties->fetchObject()) {
+    foreach ($properties as $property) {
       $data[$property->record_id][] = $property;
     }
 
@@ -175,7 +175,6 @@ class CVBrowserChunkIndexer {
       }
     }
 
-
     foreach ($cvterms_by_subject as $cvterm) {
       // avoid inserting duplicate cvterm ids
       if (!isset($added[$cvterm->subject_id][$cvterm->cvterm_id])) {
@@ -183,7 +182,6 @@ class CVBrowserChunkIndexer {
         $data[$cvterm->subject_id][] = $cvterm;
       }
     }
-
 
     return $data;
   }
@@ -201,22 +199,24 @@ class CVBrowserChunkIndexer {
     $cvterm_table = "chado.{$table}_cvterm";
     $relationship_table = "chado.{$table}_relationship";
     $primary_key = $this->primaryKey($table);
-
     $opposite_column = $column === 'object_id' ? 'subject_id' : 'object_id';
 
-    $query = db_select($relationship_table, 'RT');
-    $query->addField('CT', $primary_key, 'record_id');
-    $query->fields('CVT', ['cvterm_id']);
-    $query->fields('DB', ['name']);
-    $query->fields('DBX', ['accession']);
-    $query->fields('RT', [$column]);
-    $query->join($cvterm_table, 'CT', 'RT.' . $opposite_column . ' = CT.' . $primary_key);
-    $query->join('chado.cvterm', 'CVT', 'CT.cvterm_id = CVT.cvterm_id');
-    $query->join("chado.dbxref", "DBX", "CVT.dbxref_id = DBX.dbxref_id");
-    $query->join("chado.db", "DB", "DBX.db_id = DB.db_id");
-    $query->condition('RT.' . $column, $record_ids, 'IN');
-    $query->isNotNull('DB.name');
-    return $query->execute()->fetchAll();
+
+    $sql = "SELECT CT.$primary_key as record_id,
+                               CVT.cvterm_id,
+                               DB.name,
+                               DBX.accession,
+                               RT.$column
+                        FROM $relationship_table RT
+                        INNER JOIN $cvterm_table CT ON RT.$opposite_column = CT.$primary_key
+                        INNER JOIN chado.cvterm CVT ON CT.cvterm_id = CVT.cvterm_id
+                        INNER JOIN chado.dbxref DBX ON CVT.dbxref_id = DBX.dbxref_id
+                        INNER JOIN chado.db DB ON DBX.db_id = DB.db_id
+                        WHERE RT.$opposite_column IN (:ids)
+                              AND DB.name IS NOT NULL";
+    $query = db_query($sql, [':ids' => $record_ids]);
+
+    return $query->fetchAll();
   }
 
   /**
@@ -265,23 +265,22 @@ class CVBrowserChunkIndexer {
     $prop_table = "chado.{$table}prop";
     $relationship_table = "chado.{$table}_relationship";
     $primary_key = $this->primaryKey($table);
-
     $opposite_column = $column === 'object_id' ? 'subject_id' : 'object_id';
 
-    $query = db_select($relationship_table, 'RT');
-    $query->addField('PT', $primary_key, 'record_id');
-    $query->fields('CVT', ['cvterm_id']);
-    $query->fields('DB', ['name']);
-    $query->fields('DBX', ['accession']);
-    $query->fields('RT', [$column]);
-    $query->join($prop_table, 'PT', 'RT.' . $opposite_column . ' = PT.' . $primary_key);
-    $query->join('chado.cvterm', 'CVT', 'PT.type_id = CVT.cvterm_id');
-    $query->join("chado.dbxref", "DBX", "CVT.dbxref_id = DBX.dbxref_id");
-    $query->join("chado.db", "DB", "DBX.db_id = DB.db_id");
-    $query->condition('RT.' . $column, $record_ids, 'IN');
-    $query->isNotNull('DB.name');
+    $query = db_query("SELECT PT.{$primary_key} as record_id,
+                               CVT.cvterm_id,
+                               DB.name,
+                               DBX.accession,
+                               RT.{$opposite_column}
+                        FROM {$relationship_table} RT
+                        INNER JOIN {$prop_table} PT ON RT.{$opposite_column} = PT.{$primary_key}
+                        INNER JOIN chado.cvterm CVT ON PT.type_id = CVT.cvterm_id
+                        INNER JOIN chado.dbxref DBX ON CVT.dbxref_id = DBX.dbxref_id
+                        INNER JOIN chado.db DB ON DBX.db_id = DB.db_id
+                        WHERE RT.{$column} IN (:ids)
+                              AND DB.name IS NOT NULL", [':ids' => $record_ids]);
 
-    return $query->execute()->fetchAll();
+    return $query->fetchAll();
   }
 
   /**
@@ -321,6 +320,7 @@ class CVBrowserChunkIndexer {
     }
 
     $query->execute();
+    unset($query);
   }
 
   /**

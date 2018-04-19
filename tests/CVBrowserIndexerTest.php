@@ -56,7 +56,7 @@ class CVBrowserIndexerTest extends TripalTestCase {
   public function testIndexingData() {
     $indexer = new \CVBrowserIndexer();
     $indexer->clearIndexTable();
-    $indexer->setChunkSize(5);
+    $indexer->setChunkSize(1);
     $indexer->index(true);
 
     $count = (int) db_query('SELECT COUNT(*) FROM tripal_cvterm_entity_linker')->fetchField();
