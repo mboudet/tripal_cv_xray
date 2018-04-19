@@ -4,8 +4,8 @@
 
 require_once "includes/ChadoEntityChildCvterm.inc";
 require_once "includes/api/tripal_cv_xray.api.inc";
-require_once "includes/indexer/CVBrowserIndexer.inc";
-require_once "includes/indexer/CVBrowserChunkIndexer.inc";
+require_once "includes/Indexer/CVBrowserIndexer.inc";
+require_once "includes/Indexer/CVBrowserChunkIndexer.inc";
 
 /**
  * implement hook menu
