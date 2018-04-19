@@ -291,35 +291,35 @@ class CVBrowserChunkIndexer {
    * @return void
    */
   public function insertData(&$data) {
-//    $query = db_insert('tripal_cvterm_entity_linker')->fields([
-//      'entity_id',
-//      'cvterm_id',
-//      'database',
-//      'accession',
-//    ]);
-//
-//    foreach ($data as $record_id => $record) {
-//      $entity_id = $record['entity_id'];
-//
-//      foreach ($record['cvterms'] as $cvterm) {
-//        $query->values($this->extractCvtermForInsertion($cvterm, $entity_id));
-//      }
-//
-//      foreach ($record['related_cvterms'] as $cvterm) {
-//        $query->values($this->extractCvtermForInsertion($cvterm, $entity_id));
-//      }
-//
-//      foreach ($record['properties'] as $property) {
-//        $query->values($this->extractCvtermForInsertion($property, $entity_id));
-//      }
-//
-//      foreach ($record['related_props'] as $property) {
-//        $query->values($this->extractCvtermForInsertion($property, $entity_id));
-//      }
-//    }
-//
-//    $query->execute();
-//    unset($query);
+    $query = db_insert('tripal_cvterm_entity_linker')->fields([
+      'entity_id',
+      'cvterm_id',
+      'database',
+      'accession',
+    ]);
+
+    foreach ($data as $record_id => $record) {
+      $entity_id = $record['entity_id'];
+
+      foreach ($record['cvterms'] as $cvterm) {
+        $query->values($this->extractCvtermForInsertion($cvterm, $entity_id));
+      }
+
+      foreach ($record['related_cvterms'] as $cvterm) {
+        $query->values($this->extractCvtermForInsertion($cvterm, $entity_id));
+      }
+
+      foreach ($record['properties'] as $property) {
+        $query->values($this->extractCvtermForInsertion($property, $entity_id));
+      }
+
+      foreach ($record['related_props'] as $property) {
+        $query->values($this->extractCvtermForInsertion($property, $entity_id));
+      }
+    }
+
+    $query->execute();
+    unset($query);
   }
 
   /**

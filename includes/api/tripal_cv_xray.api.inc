@@ -12,7 +12,7 @@ function tripal_cv_xray_cvterm_entity_job() {
  * Run the indexer.
  */
 function tripal_cv_xray_run_indexer() {
-  CVBrowserIndexer::run();
+  tripal_cv_xray_index();
 }
 
 
