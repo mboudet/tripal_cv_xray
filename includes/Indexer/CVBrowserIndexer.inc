@@ -89,7 +89,7 @@ class CVBrowserIndexer {
       $position += $this->chunk;
 
       // Clean up memory
-      $indexer = null;
+      $indexer = NULL;
       unset($indexer);
       gc_collect_cycles();
       gc_disable();
@@ -123,10 +123,7 @@ class CVBrowserIndexer {
    */
   public function bundleTotal($bundle) {
     $bundle_table = "chado_bio_data_{$bundle->bundle_id}";
-    return (int) db_select($bundle_table)
-      ->countQuery()
-      ->execute()
-      ->fetchField();
+    return (int) db_query("SELECT COUNT(*) FROM {{$bundle_table}}")->fetchField();
   }
 
   /**
@@ -139,12 +136,16 @@ class CVBrowserIndexer {
   public function getEntitiesChunk($bundle, $position) {
     $bundle_table = "chado_bio_data_{$bundle->bundle_id}";
 
-    $query = db_select($bundle_table, 'CB');
-    $query->fields('CB', ['entity_id', 'record_id']);
-    $query->orderBy('entity_id', 'asc');
-    $query->range($position, $this->chunk);
+    $query = db_query("SELECT CB.entity_id, CB.record_id
+                        FROM {{$bundle_table}} CB
+                        ORDER BY entity_id ASC
+                        OFFSET :offset
+                        LIMIT :limit", [
+      ':offset' => $position,
+      ':limit' => $this->chunk,
+    ]);
 
-    return $query->execute()->fetchAll();
+    return $query->fetchAll();
   }
 
   protected function error($line) {
@@ -157,13 +158,12 @@ class CVBrowserIndexer {
    * @return mixed
    */
   public function bundles() {
-    $query = db_select('chado_bundle', 'CB');
-    $query->fields('CB', ['bundle_id', 'data_table']);
-    $query->fields('TB', ['label']);
-    $query->join('tripal_bundle', 'TB', 'TB.id = CB.bundle_id');
-    $query->condition('data_table', $this->supportedTables, 'IN');
+    $query = db_query('SELECT CB.bundle_id, CB.data_table, TB.label
+              FROM {chado_bundle} CB
+              INNER JOIN {tripal_bundle} TB ON TB.id = CB.bundle_id
+              WHERE data_table IN (:supported)', [':supported' => $this->supportedTables]);
 
-    return $query->execute()->fetchAll();
+    return $query->fetchAll();
   }
 
   /**

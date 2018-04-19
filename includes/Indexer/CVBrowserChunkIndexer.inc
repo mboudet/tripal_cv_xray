@@ -201,7 +201,6 @@ class CVBrowserChunkIndexer {
     $primary_key = $this->primaryKey($table);
     $opposite_column = $column === 'object_id' ? 'subject_id' : 'object_id';
 
-
     $sql = "SELECT CT.$primary_key as record_id,
                                CVT.cvterm_id,
                                DB.name,
@@ -268,10 +267,10 @@ class CVBrowserChunkIndexer {
     $opposite_column = $column === 'object_id' ? 'subject_id' : 'object_id';
 
     $query = db_query("SELECT PT.{$primary_key} as record_id,
-                               CVT.cvterm_id,
-                               DB.name,
-                               DBX.accession,
-                               RT.{$opposite_column}
+                              CVT.cvterm_id,
+                              DB.name,
+                              DBX.accession,
+                              RT.{$opposite_column}
                         FROM {$relationship_table} RT
                         INNER JOIN {$prop_table} PT ON RT.{$opposite_column} = PT.{$primary_key}
                         INNER JOIN chado.cvterm CVT ON PT.type_id = CVT.cvterm_id
@@ -292,35 +291,35 @@ class CVBrowserChunkIndexer {
    * @return void
    */
   public function insertData(&$data) {
-    $query = db_insert('tripal_cvterm_entity_linker')->fields([
-      'entity_id',
-      'cvterm_id',
-      'database',
-      'accession',
-    ]);
-
-    foreach ($data as $record_id => $record) {
-      $entity_id = $record['entity_id'];
-
-      foreach ($record['cvterms'] as $cvterm) {
-        $query->values($this->extractCvtermForInsertion($cvterm, $entity_id));
-      }
-
-      foreach ($record['related_cvterms'] as $cvterm) {
-        $query->values($this->extractCvtermForInsertion($cvterm, $entity_id));
-      }
-
-      foreach ($record['properties'] as $property) {
-        $query->values($this->extractCvtermForInsertion($property, $entity_id));
-      }
-
-      foreach ($record['related_props'] as $property) {
-        $query->values($this->extractCvtermForInsertion($property, $entity_id));
-      }
-    }
-
-    $query->execute();
-    unset($query);
+//    $query = db_insert('tripal_cvterm_entity_linker')->fields([
+//      'entity_id',
+//      'cvterm_id',
+//      'database',
+//      'accession',
+//    ]);
+//
+//    foreach ($data as $record_id => $record) {
+//      $entity_id = $record['entity_id'];
+//
+//      foreach ($record['cvterms'] as $cvterm) {
+//        $query->values($this->extractCvtermForInsertion($cvterm, $entity_id));
+//      }
+//
+//      foreach ($record['related_cvterms'] as $cvterm) {
+//        $query->values($this->extractCvtermForInsertion($cvterm, $entity_id));
+//      }
+//
+//      foreach ($record['properties'] as $property) {
+//        $query->values($this->extractCvtermForInsertion($property, $entity_id));
+//      }
+//
+//      foreach ($record['related_props'] as $property) {
+//        $query->values($this->extractCvtermForInsertion($property, $entity_id));
+//      }
+//    }
+//
+//    $query->execute();
+//    unset($query);
   }
 
   /**
