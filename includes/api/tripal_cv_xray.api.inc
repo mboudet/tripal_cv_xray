@@ -1,14 +1,6 @@
 <?php
 
 /**
- * Updates all entities with all CVs.
- */
-function tripal_cv_xray_cvterm_entity_job() {
-  $converter = new ChadoEntityChildCvterm();
-  $converter->update_all_entities();
-}
-
-/**
  * Run the indexer.
  */
 function tripal_cv_xray_run_indexer() {
