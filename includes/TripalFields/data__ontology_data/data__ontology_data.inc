@@ -95,6 +95,7 @@ class data__ontology_data extends TripalField {
    *   value of the field.
    */
   public function load($entity) {
+    return;
     parent::load($entity);
     $entity_id = $entity->id;
     $field_name = $this->field['field_name'];
@@ -195,7 +196,7 @@ Before you can use this field, you must choose which CV to display, and what ent
     if ($anchor_base_table == "organism" || $anchor_base_table == "analysis") {
     //  $base_tables = ["feature", "biomaterial"];
     }
-    
+
     $element['container']['target_bundle'] = array(
       '#type' => 'select',
       '#title' => 'Target Bundle to Map Onto CV Tree',
