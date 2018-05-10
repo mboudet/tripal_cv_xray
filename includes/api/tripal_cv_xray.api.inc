@@ -9,14 +9,6 @@ function tripal_cv_xray_cvterm_entity_job() {
 }
 
 /**
- * Run the indexer.
- */
-function tripal_cv_xray_run_indexer() {
-  //  CVBrowserIndexer::run();
-}
-
-
-/**
  * looks up all the entities associated with an array of cvterms.
  *
  * @param array $terms : An array of term objects

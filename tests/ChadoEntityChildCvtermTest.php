@@ -7,7 +7,6 @@ class entity_child_cvterm_test extends TripalTestCase {
 
   use DBTransaction;
 
-
   public function test_get_all_associated_cvterms() {
     $obj = new ChadoEntityChildCvterm();
 
