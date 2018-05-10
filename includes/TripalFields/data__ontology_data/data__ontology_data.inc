@@ -140,7 +140,6 @@ class data__ontology_data extends TripalField {
    */
   public function load($entity) {
     parent::load($entity);
-
     // Set default value
     $field_name = $this->field['field_name'];
     $entity->{$field_name}['und'][0]['value'] = NULL;
@@ -193,7 +192,6 @@ class data__ontology_data extends TripalField {
         // Works with feature in mind, and will work when chado table has organism_id column
         $query->condition('tct.organism_id', $record_id, '=');
       }
-
       $results = ((int) $query->countQuery()->execute()->fetchField()) > 1;
     }
 
